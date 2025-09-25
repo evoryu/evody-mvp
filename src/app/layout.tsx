@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import Avatar from '@/components/avatar'
 
 // これらはそのままOK
 import { PointsProvider } from './points-context'
@@ -31,6 +32,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link className="hover:text-black" href="/profile">Profile</Link>
                 {/* 👇 クライアント側のバッジ */}
                 <PointsBadge />
+                <div className="hidden sm:block">
+    <Avatar name="" size={28} /> {/* ユーザー名で色が変わる。ここは小さめ */}
+  </div>
               </nav>
             </div>
           </header>

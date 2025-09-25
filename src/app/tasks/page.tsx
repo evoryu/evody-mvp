@@ -3,6 +3,7 @@
 import React from 'react'
 import { usePoints } from '../points-context'
 
+
 type Task = {
   id: string
   title: string
@@ -45,25 +46,38 @@ export default function TasksPage() {
     setMinutes('')
   }
 
-  const toggleDone = (id: string) => {
-    let delta = 0
-    setTasks(prev => {
-      const next = prev.map(t => {
-        if (t.id !== id) return t
-        const nowDone = !t.done
-        if (nowDone && !t.done) delta += 10
-        if (!nowDone && t.done) delta -= 10
-        return { ...t, done: nowDone }
-      })
-      queueMicrotask(() => {
-        if (delta) add(delta)
-      })
-      return next
-    })
+const pointsFor = (m: number) => Math.max(5, Math.min(50, Math.floor((m || 0) / 5)))
+
+const toggleDone = (id: string) => {
+  // 1) まず現在のタスクから変化前の状態を取得
+  const target = tasks.find(t => t.id === id)
+  if (!target) return
+
+  const nowDone = !target.done
+  const pts = pointsFor(target.minutes)
+  const delta = nowDone ? pts : -pts
+
+  // 2) タスク状態を更新（ここではポイント加算しない）
+  setTasks(prev =>
+    prev.map(t => (t.id === id ? { ...t, done: nowDone } : t))
+  )
+
+  // 3) 今日の達成数ログ（完了にするときだけ +1）
+  if (nowDone) {
+    const key = 'evody:daily'
+    const raw = localStorage.getItem(key)
+    const daily = raw ? (JSON.parse(raw) as Record<string, number>) : {}
+    const k = new Date().toISOString().slice(0, 10)
+    daily[k] = (daily[k] || 0) + 1
+    localStorage.setItem(key, JSON.stringify(daily))
   }
 
+  // 4) 最後にポイントを加算/減算（イベントハンドラ側なので二重にならない）
+  add(delta)
+}
+
   const removeTask = (id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id))
+    setTasks((prev: Task[]) => prev.filter(t => t.id !== id))
   }
 
   return (
@@ -79,12 +93,14 @@ export default function TasksPage() {
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
+        {/* subject */}
           <input
             className="rounded-lg border px-3 py-2"
             placeholder="科目（例：英語）"
             value={subject}
             onChange={e => setSubject(e.target.value)}
           />
+        {/* minutes */}
           <input
             className="rounded-lg border px-3 py-2"
             placeholder="所要（分）"
@@ -96,10 +112,7 @@ export default function TasksPage() {
             }}
           />
         </div>
-        <button
-          type="submit"
-          className="rounded-xl bg-black px-5 py-2 font-medium text-white"
-        >
+        <button type="submit" className="rounded-xl bg-black px-5 py-2 font-medium text-white">
           追加
         </button>
       </form>
