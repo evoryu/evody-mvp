@@ -28,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <nav className="flex items-center gap-4 text-sm text-gray-600">
                 <Link className="hover:text-black" href="/about">About</Link>
                 <Link className="hover:text-black" href="/tasks">Tasks</Link>
+                <Link className="hover:text-black" href="/profile">Profile</Link>
                 {/* 👇 クライアント側のバッジ */}
                 <PointsBadge />
               </nav>
