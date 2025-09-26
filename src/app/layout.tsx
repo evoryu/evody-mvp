@@ -30,6 +30,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link className="hover:text-black" href="/about">About</Link>
                 <Link className="hover:text-black" href="/tasks">Tasks</Link>
                 <Link className="hover:text-black" href="/profile">Profile</Link>
+  <Link className="hover:text-black" href="/study/quick">Quick Study</Link>
+  <Link className="hover:text-black" href="/decks">Decks</Link>
                 {/* 👇 クライアント側のバッジ */}
                 <PointsBadge />
                 <div className="hidden sm:block">
