@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { usePoints } from '../points-context'
+import { useToast } from '../toast-context'
 
 
 type Task = {
@@ -14,6 +15,7 @@ type Task = {
 
 export default function TasksPage() {
   const { add } = usePoints()
+  const { showToast } = useToast()
   const [tasks, setTasks] = React.useState<Task[]>([])
   const [title, setTitle] = React.useState('')
   const [subject, setSubject] = React.useState('')
@@ -74,6 +76,9 @@ const toggleDone = (id: string) => {
 
   // 4) 最後にポイントを加算/減算（イベントハンドラ側なので二重にならない）
   add(delta)
+  if (nowDone) {
+    showToast(`タスク完了で ${pts}pt 獲得！`)
+  }
 }
 
   const removeTask = (id: string) => {
