@@ -6,11 +6,16 @@ import { ThemeProvider as NextThemesProvider } from 'next-themes'
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
-      attribute="class"
+      attribute="data-theme"
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
       enableColorScheme
+      value={{
+        light: "light",
+        dark: "dark",
+        system: "system"
+      }}
     >
       {children}
     </NextThemesProvider>

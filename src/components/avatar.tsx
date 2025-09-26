@@ -53,52 +53,54 @@ export default function Avatar({ name, size = 96 }: Props) {
     360
 
   return (
-    <div className="space-y-3">
+    <div className="relative">
       <div
         className="relative overflow-hidden rounded-full border bg-gray-100"
         style={{ width: size, height: size }}
         title={name || 'avatar'}
       >
-          {dataUrl ? (
-            <Image
-              src={dataUrl}
-              alt="avatar"
-              className="h-full w-full object-cover"
-              draggable={false}
-              width={size}
-              height={size}
-              style={{ objectFit: 'cover' }}
-              unoptimized
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center text-white"
-              style={{ backgroundColor: `hsl(${hue} 70% 45%)` }}
-            >
-              <span className="select-none text-2xl font-bold">{initials}</span>
-            </div>
-          )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <label className="inline-flex cursor-pointer items-center rounded-lg border px-3 py-1 text-sm hover:bg-gray-100">
-          画像を選ぶ
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onPick}
+        {dataUrl ? (
+          <Image
+            src={dataUrl}
+            alt="avatar"
+            className="h-full w-full object-cover"
+            draggable={false}
+            width={size}
+            height={size}
+            style={{ objectFit: 'cover' }}
+            unoptimized
           />
-        </label>
-        {dataUrl && (
-          <button
-            onClick={clear}
-            className="rounded-lg border px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
-            title="アバターをリセット"
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center text-white"
+            style={{ backgroundColor: `hsl(${hue} 70% 45%)` }}
           >
-            クリア
-          </button>
+            <span style={{ fontSize: `${size * 0.4}px` }} className="select-none font-bold">{initials}</span>
+          </div>
         )}
+        
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50">
+          <div className="flex gap-2 text-white" style={{ fontSize: `${size * 0.3}px` }}>
+            <label className="cursor-pointer rounded px-2 py-0.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm">
+              編集
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onPick}
+              />
+            </label>
+            {dataUrl && (
+              <button
+                onClick={clear}
+                className="rounded px-2 py-0.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                title="アバターをリセット"
+              >
+                削除
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

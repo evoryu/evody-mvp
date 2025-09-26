@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { Noto_Sans_JP, Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Avatar from '@/components/avatar'
+import { PointsBadge } from '@/components/points-badge'
 
 // これらはそのままOK
 import { PointsProvider } from './points-context'
 import { ToastProvider } from './toast-context'
-import { PointsBadge } from '@/components/points-badge'
 import ThemeToggle from '@/components/theme-toggle'
 
 import { ThemeProvider } from './theme-provider'
@@ -40,78 +40,48 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja" className={`${notoSansJP.variable} ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <head>
+        <meta name="color-scheme" content="light dark" />
+      </head>
       <body className="min-h-dvh bg-gray-50 text-[15px] antialiased dark:bg-zinc-950">
         <ThemeProvider>
         <PointsProvider>
         <ToastProvider>
-          <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-              <Link 
-                href="/" 
-                className="text-xl font-bold tracking-tight text-gray-900 transition-colors hover:text-gray-600 dark:text-white dark:hover:text-gray-300"
-              >
-                evody
-              </Link>
-              <nav className="flex items-center gap-6">
-                <div className="hidden items-center gap-5 text-[15px] font-medium text-gray-600 dark:text-zinc-400 sm:flex">
-                  <Link 
-                    className="transition-colors hover:text-gray-900 dark:hover:text-white" 
-                    href="/about"
-                  >
-                    About
-                  </Link>
-                  <Link 
-                    className="transition-colors hover:text-gray-900 dark:hover:text-white" 
-                    href="/tasks"
-                  >
-                    Tasks
-                  </Link>
-                  <Link 
-                    className="transition-colors hover:text-gray-900 dark:hover:text-white" 
-                    href="/profile"
-                  >
-                    Profile
-                  </Link>
-                  <Link 
-                    className="transition-colors hover:text-gray-900 dark:hover:text-white" 
-                    href="/study/quick"
-                  >
-                    Quick Study
-                  </Link>
-                  <Link 
-                    className="transition-colors hover:text-gray-900 dark:hover:text-white" 
-                    href="/decks"
-                  >
-                    Decks
-                  </Link>
-                </div>
-                <div className="flex items-center gap-3">
-                  <PointsBadge />
-                  <ThemeToggle />
-                  <div className="hidden rounded-lg border border-gray-200 p-1 dark:border-zinc-800 sm:block">
-                    <Avatar name="" size={28} />
-                  </div>
-                </div>
-              </nav>
+      <header className="sticky top-0 z-50 backdrop-blur bg-background/80 border-b border-color-border">
+        <nav className="mx-auto flex h-20 max-w-5xl items-center justify-between px-8">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="text-lg font-semibold">evody</Link>
+            <div className="flex items-center gap-4 text-[15px]">
+              <Link href="/about">About</Link>
+              <Link href="/study/quick">Study</Link>
+              <Link href="/tasks">Tasks</Link>
+              <Link href="/decks">Decks</Link>
             </div>
-          </header>
+          </div>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <PointsBadge />
+            <Link href="/profile">
+              <Avatar name="Y" size={24} />
+            </Link>
+          </div>
+        </nav>
+      </header>          <main className="mx-auto max-w-5xl px-4 py-12">{children}</main>
 
-          <main className="mx-auto max-w-5xl px-4 py-12">{children}</main>
-
-          <footer className="border-t border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="mx-auto max-w-5xl px-4 py-8">
+          <footer className="border-t border-color-border bg-background/80 backdrop-blur">
+            <div className="mx-auto max-w-5xl px-8 py-6">
               <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="text-sm text-gray-600 dark:text-zinc-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   © {new Date().getFullYear()} evody - 効率的な学習をサポート
                 </p>
-                <nav className="flex gap-6 text-sm text-gray-500 dark:text-zinc-500">
-                  <Link href="/about" className="transition-colors hover:text-gray-900 dark:hover:text-zinc-300">
+                <nav className="flex gap-6 text-sm">
+                  <Link href="/about" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
                     About
                   </Link>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-gray-900 dark:hover:text-zinc-300">
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
                     Twitter
                   </a>
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-gray-900 dark:hover:text-zinc-300">
+                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
                     GitHub
                   </a>
                 </nav>

@@ -87,7 +87,7 @@ export default function QuickStudyPage() {
       <section className="space-y-6">
         <h1 className="text-2xl font-bold">Quick Study</h1>
         <motion.div 
-          className="overflow-hidden rounded-2xl border bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+          className="overflow-hidden rounded-2xl border border-color-border bg-background/80 backdrop-blur shadow-lg"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", duration: 0.6 }}
@@ -141,15 +141,24 @@ export default function QuickStudyPage() {
             <div className="mt-6 flex gap-3">
               <Link 
                 href="/decks" 
-                className="flex-1 rounded-xl border px-4 py-3 text-center text-sm font-medium transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                className="group/button flex flex-1 items-center justify-center gap-2 rounded-xl border border-color-border bg-background/80 backdrop-blur px-4 py-3 text-sm font-medium text-gray-600 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md active:shadow-sm dark:text-zinc-400 dark:hover:text-white"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H4.262c.1-.596.386-1.096.778-1.488A2.25 2.25 0 017.25 2h6.5a2.25 2.25 0 012.238 1.012z" />
+                  <path fillRule="evenodd" d="M2.75 6.5a2.25 2.25 0 012.25-2.25h6.5a2.25 2.25 0 012.25 2.25v6.5a2.25 2.25 0 01-2.25 2.25h-6.5a2.25 2.25 0 01-2.25-2.25v-6.5z" />
+                </svg>
                 デッキを探す
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-100/50 to-white/50 opacity-0 transition-opacity group-hover/button:opacity-100 dark:from-white/5 dark:to-gray-400/5" />
               </Link>
               <button
-                className="flex-1 rounded-xl bg-black px-4 py-3 text-sm font-medium text-white transition-all hover:bg-gray-800 hover:shadow-lg dark:bg-white dark:text-black dark:hover:bg-gray-100"
+                className="action-button group/button relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-md transition-all hover:shadow-lg active:shadow-sm"
                 onClick={() => { setI(0); setReveal(false); setEarned(0); setDone(false) }}
               >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                </svg>
                 もう一度
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 transition-opacity group-hover/button:opacity-100 mix-blend-overlay" />
               </button>
             </div>
           </motion.div>
@@ -170,7 +179,7 @@ export default function QuickStudyPage() {
 
       {/* カード */}
       <motion.div 
-        className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-zinc-900/20"
+        className="rounded-2xl border border-color-border bg-background/80 backdrop-blur p-8 shadow-lg hover:shadow-xl"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -210,12 +219,26 @@ export default function QuickStudyPage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           {!reveal ? (
-            <button
-              className="rounded-xl border-2 border-gray-900 bg-gray-900 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:border-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+            <motion.button
               onClick={() => setReveal(true)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="reveal-button group relative overflow-hidden rounded-xl px-8 py-3 text-sm font-medium shadow-lg transition-all hover:shadow-xl"
             >
-              Reveal
-            </button>
+              <span className="relative z-10 flex items-center gap-2">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor" 
+                  className="h-4 w-4 transition-transform duration-500 group-hover:rotate-180"
+                >
+                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+                  <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                </svg>
+                <span>Reveal</span>
+                <span className="ml-1 opacity-60">[Space]</span>
+              </span>
+            </motion.button>
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-3">

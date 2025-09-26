@@ -16,10 +16,10 @@ const scores = {
 } as const
 
 const variants = {
-  danger: 'border-red-500 bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 dark:from-transparent dark:to-transparent dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-500 dark:hover:bg-red-500/20 dark:hover:border-red-500/50',
-  warning: 'border-amber-500 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 dark:from-transparent dark:to-transparent dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-500 dark:hover:bg-amber-500/20 dark:hover:border-amber-500/50',
-  success: 'border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 dark:from-transparent dark:to-transparent dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-500 dark:hover:bg-emerald-500/20 dark:hover:border-emerald-500/50',
-  perfect: 'border-blue-500 bg-gradient-to-br from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 dark:from-transparent dark:to-transparent dark:border-blue-500/30 dark:bg-blue-950/30 dark:text-blue-500 dark:hover:bg-blue-500/20 dark:hover:border-blue-500/50',
+  danger: 'border-red-500 bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 dark:from-red-600/90 dark:to-red-700/90 dark:border-red-500/30 dark:text-white dark:hover:from-red-500/90 dark:hover:to-red-600/90',
+  warning: 'border-amber-500 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 dark:from-amber-500/90 dark:to-amber-600/90 dark:border-amber-500/30 dark:text-white dark:hover:from-amber-400/90 dark:hover:to-amber-500/90',
+  success: 'border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 dark:from-emerald-600/90 dark:to-emerald-700/90 dark:border-emerald-500/30 dark:text-white dark:hover:from-emerald-500/90 dark:hover:to-emerald-600/90',
+  perfect: 'border-blue-500 bg-gradient-to-br from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 dark:from-blue-600/90 dark:to-blue-700/90 dark:border-blue-500/30 dark:text-white dark:hover:from-blue-500/90 dark:hover:to-blue-600/90',
 }
 
 export function GradeButton({

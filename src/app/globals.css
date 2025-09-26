@@ -1,19 +1,88 @@
 @import 'tailwindcss';
 
 :root {
+  /* Light mode variables */
   --background: #ffffff;
   --foreground: #171717;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  
+  /* Global font variables */
   --font-sans: var(--font-noto-sans-jp), var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-geist-mono), SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  
+  /* Common color variables */
+  --color-primary: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Common accent colors */
+  --color-blue-500: #3080ff;
+  --color-emerald-500: #00c758;
+  --color-red-500: #fb2c36;
+  --color-amber-500: #edb200;
+  
+  /* Common UI colors */
+  --color-border: var(--color-gray-200);
+  --color-ring: var(--color-gray-200);
+  --color-surface: #ffffff;
+
+  /* ボタン用の色 */
+  --color-button-bg: #000000;
+  --color-button-text: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ダークモード - data-theme属性に基づく */
+[data-theme="dark"] {
+  /* Dark mode variables */
+  --background: #09090b;
+  --foreground: #fafafa;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  /* Dark mode color overrides */
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
+  
+  /* ダークモードのボタン用の色 */
+  --color-button-bg: #ffffff;
+  --color-button-text: #000000;
+  
+  /* ダークモードのグレースケール（暗い → 明るい） */
+  --color-gray-50: #18181b;   /* 最も暗い背景 */
+  --color-gray-100: #1f1f23;  /* カード背景 */
+  --color-gray-200: #27272a;  /* ボーダー */
+  --color-gray-300: #3f3f46;  /* 弱い文字 */
+  --color-gray-400: #52525b;  /* アイコン */
+  --color-gray-500: #71717a;  /* プレースホルダー */
+  --color-gray-600: #a1a1aa;  /* 副見出し */
+  --color-gray-700: #d4d4d8;  /* 本文 */
+  --color-gray-800: #e4e4e7;  /* 見出し */
+  --color-gray-900: #fafafa;  /* 強調文字 */
+  
+  /* ダークモードのアクセントカラー（濃い色にして視認性を確保） */
+  --color-blue-500: #3b82f6;     /* リンク、プライマリボタン */
+  --color-emerald-500: #10b981;  /* 成功 */
+  --color-red-500: #ef4444;      /* エラー */
+  --color-amber-500: #f59e0b;    /* 警告 */
+  
+  /* ダークモードのUI要素 */
+  --color-border: var(--color-gray-200);
+  --color-ring: var(--color-gray-300);
+  --color-surface: var(--color-gray-100);  /* カード、ヘッダーなどの背景 */
+  
+  /* オーバーレイと影 */
+  --overlay-light: rgba(255, 255, 255, 0.1);
+  --overlay-dark: rgba(0, 0, 0, 0.2);
 }
 
 /* 基本フォントスタイル */
@@ -25,6 +94,37 @@ body {
   letter-spacing: 0.01em;  /* 全体的な字間を少し広げる */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Button styles */
+.reveal-button {
+  background: linear-gradient(135deg, var(--color-button-bg) 0%, color-mix(in srgb, var(--color-button-bg) 80%, black) 100%);
+  color: var(--color-button-text);
+}
+
+.action-button {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  color: white;
+}
+
+[data-theme="dark"] .action-button {
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  color: #171717;
+}
+
+/* Form and card styles */
+.task-card {
+  background-color: var(--background);
+  border-color: var(--color-border);
+  color: var(--foreground);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-input {
+  background: var(--background);
+  border-color: var(--color-border);
+  color: var(--foreground);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* 見出しのスタイル */

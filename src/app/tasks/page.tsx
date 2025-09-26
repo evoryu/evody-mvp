@@ -90,24 +90,24 @@ const toggleDone = (id: string) => {
       <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
 
       {/* 追加フォーム */}
-      <form onSubmit={addTask} className="rounded-xl border bg-white p-4 space-y-3">
+      <form onSubmit={addTask} className="task-card rounded-xl border p-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-3">
           <input
-            className="rounded-lg border px-3 py-2"
+            className="task-input rounded-lg border px-3 py-2"
             placeholder="タイトル（例：英単語30個）"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
         {/* subject */}
           <input
-            className="rounded-lg border px-3 py-2"
+            className="task-input rounded-lg border px-3 py-2"
             placeholder="科目（例：英語）"
             value={subject}
             onChange={e => setSubject(e.target.value)}
           />
         {/* minutes */}
           <input
-            className="rounded-lg border px-3 py-2"
+            className="task-input rounded-lg border px-3 py-2"
             placeholder="所要（分）"
             inputMode="numeric"
             value={minutes}
@@ -117,7 +117,7 @@ const toggleDone = (id: string) => {
             }}
           />
         </div>
-        <button type="submit" className="rounded-xl bg-black px-5 py-2 font-medium text-white">
+        <button type="submit" className="action-button rounded-xl px-5 py-2 font-medium">
           追加
         </button>
       </form>
@@ -128,7 +128,7 @@ const toggleDone = (id: string) => {
           <li className="text-gray-500">まだタスクがありません。上のフォームから追加してね。</li>
         )}
         {tasks.map(t => (
-          <li key={t.id} className="rounded-xl border bg-white p-4">
+          <li key={t.id} className="task-card rounded-xl border p-4">
             <div className="flex items-start justify-between gap-4">
               <label className="flex items-start gap-3">
                 <input
@@ -138,17 +138,17 @@ const toggleDone = (id: string) => {
                   onChange={() => toggleDone(t.id)}
                 />
                 <div>
-                  <p className={`font-semibold ${t.done ? 'line-through text-gray-400' : ''}`}>
+                  <p className={`font-semibold ${t.done ? 'line-through text-gray-400 dark:text-gray-600' : ''}`}>
                     {t.title}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t.subject || '—'} ・ {t.minutes ? `${t.minutes}分` : '—'}
                   </p>
                 </div>
               </label>
               <button
                 onClick={() => removeTask(t.id)}
-                className="rounded-lg border px-3 py-1 text-sm hover:bg-gray-100"
+                className="task-input rounded-lg border px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 削除
               </button>
