@@ -6,6 +6,9 @@ import { useToast } from '@/app/toast-context'
 import { GradeButton as ImportedGradeButton } from '@/components/grade-button'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { saveEpisode, formatEpisodePost } from '@/lib/episodes'
+import { logReview } from '@/lib/reviews'
+import { useSocial } from '@/app/social-context'
 
 // ダミーカード（あとでデッキから差し替え可能）
 type Card = { id: string; front: string; back: string; example?: string }
@@ -18,147 +21,167 @@ const SEED: Card[] = [
 ]
 
 // 評価ボタン → 付与ポイント
-const SCORE: Record<'Again' | 'Hard' | 'Good' | 'Easy', number> = {
-  Again: 0,
-  Hard: 3,
-  Good: 6,
-  Easy: 8,
-}
+const SCORE = { Again: 0, Hard: 3, Good: 6, Easy: 8 } as const
+type Grade = keyof typeof SCORE
 
 export default function QuickStudyPage() {
   const { add } = usePoints()
   const { showToast } = useToast()
+  const social = React.useRef<null | ReturnType<typeof useSocial>>(null)
+  try {
+    // SocialProvider 配下であれば利用可能
+    // (feedページ等では自動投稿を即時反映できる)
+    // Provider外の場合は無視
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    social.current = useSocial()
+  } catch { /* ignore if not in provider */ }
 
-  const [i, setI] = React.useState(0)            // 何枚目か
+  const [i, setI] = React.useState(0)
   const [reveal, setReveal] = React.useState(false)
-  const [earned, setEarned] = React.useState(0)  // このセッションの合計pt
+  const [earned, setEarned] = React.useState(0)
   const [done, setDone] = React.useState(false)
+  const [startedAt] = React.useState(() => Date.now())
+  const correctRef = React.useRef(0)
+  const incorrectRef = React.useRef(0)
+  // useEffect の依存配列安定化用（Flipper 警告対策）
+  const doneRef = React.useRef(done)
+  React.useEffect(() => { doneRef.current = done }, [done])
+  const revealAtRef = React.useRef<number | null>(null)
 
   const card = SEED[i]
 
   const next = React.useCallback(() => {
     setReveal(false)
-    if (i + 1 >= SEED.length) {
-      setDone(true)
-    } else {
-      setI(i + 1)
-    }
+    if (i + 1 >= SEED.length) setDone(true)
+    else setI(i + 1)
   }, [i])
 
-  const onGrade = React.useCallback((g: keyof typeof SCORE) => {
+  const onGrade = React.useCallback((g: Grade) => {
+    let singleDelta: number | undefined
+    if (revealAtRef.current) {
+      const delta = Date.now() - revealAtRef.current
+      if (delta >=0 && delta < 60000) singleDelta = delta
+      revealAtRef.current = null
+    }
     const pts = SCORE[g]
-    setEarned((e) => e + pts)
-    add(pts) // 全体ポイントにも反映
+    setEarned(e => e + pts)
+    add(pts)
+    if (g === 'Again') incorrectRef.current += 1
+    else correctRef.current += 1
+    // 簡易SRSログ (Quick学習は仮deckId 'quick')
+    try { logReview(card.id, 'quick', g, Date.now(), singleDelta) } catch {}
     showToast(`${g}評価で ${pts}pt 獲得！`)
     next()
-  }, [add, next, showToast])
+  }, [add, next, showToast, card?.id])
 
-  // キーボードショートカットのハンドラ
   React.useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
+    if (doneRef.current) return
+    const handle = (e: KeyboardEvent) => {
       if (!reveal) {
         if (e.key === ' ' || e.key === 'Enter') {
-          setReveal(true)
+          e.preventDefault()
+          setReveal(true); revealAtRef.current = Date.now()
         }
         return
       }
-
-      const gradeMap: Record<string, keyof typeof SCORE> = {
-        '1': 'Again',
-        '2': 'Hard',
-        '3': 'Good',
-        '4': 'Easy',
-      }
-
+      const gradeMap: Record<string, Grade> = { '1': 'Again', '2': 'Hard', '3': 'Good', '4': 'Easy' }
       if (gradeMap[e.key]) {
         onGrade(gradeMap[e.key])
       }
     }
-
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
 
-  // セッションの進捗（表示用）
   const progress = Math.round(((done ? SEED.length : i) / SEED.length) * 100)
+
+  // 完了時に一度だけEpisode保存
+  React.useEffect(() => {
+    if (!done) return
+    const ep = saveEpisode({
+      kind: 'quick',
+      startedAt,
+      finishedAt: Date.now(),
+      correct: correctRef.current,
+      incorrect: incorrectRef.current,
+      points: earned,
+    })
+    // 自動投稿設定
+    try {
+      const flag = localStorage.getItem('evody:autoPostEpisodes')
+      if (flag === '1' && social.current) {
+        social.current.create(formatEpisodePost(ep))
+        showToast('学習完了をフィードに投稿しました')
+      }
+    } catch { /* ignore */ }
+  }, [done, startedAt, earned, showToast])
 
   if (done) {
     return (
       <section className="space-y-6">
         <h1 className="text-2xl font-bold">Quick Study</h1>
-        <motion.div 
-          className="overflow-hidden rounded-2xl border border-color-border bg-background/80 backdrop-blur shadow-lg"
+        <motion.div
+          className="overflow-hidden rounded-2xl border bg-[var(--c-surface)]/80 shadow-lg backdrop-blur"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", duration: 0.6 }}
+          transition={{ type: 'spring', duration: 0.6 }}
         >
-          {/* ヘッダー部分 */}
-          <div className="border-b bg-gradient-to-br from-emerald-50 to-blue-50 px-6 py-8 dark:border-zinc-800 dark:from-emerald-950/30 dark:to-blue-950/30">
+          <div className="border-b px-8 py-10 dark:border-[var(--c-border)]/50">
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", delay: 0.2 }}
+              transition={{ type: 'spring', delay: 0.15 }}
               className="mb-2 flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="text-2xl font-bold">セッション完了！</h2>
+              <h2 className="text-xl font-bold">セッション完了！</h2>
             </motion.div>
-            <motion.div
+            <motion.p
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center text-gray-600 dark:text-zinc-400"
+              transition={{ delay: 0.3 }}
+              className="text-center text-[var(--c-text-secondary)] text-sm"
             >
-              お疲れ様でした！クイック学習でも着実に知識が身についています。
-            </motion.div>
+              お疲れさまです。継続が定着の近道です。
+            </motion.p>
           </div>
-
-          {/* 獲得ポイント */}
           <motion.div
             className="space-y-4 p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.45 }}
           >
-            <div className="flex items-center justify-center gap-4">
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-500 dark:text-zinc-400">獲得ポイント</div>
-                <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                  {earned} pt
+            <div className="flex items-center justify-center gap-6">
+              <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
+                <div className="text-center">
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">獲得ポイント</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{earned}</div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-500 dark:text-zinc-400">学習カード</div>
-                <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                  {SEED.length}枚
+              <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
+                <div className="text-center">
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{SEED.length}</div>
                 </div>
               </div>
             </div>
-
-            {/* アクションボタン */}
             <div className="mt-6 flex gap-3">
-              <Link 
-                href="/decks" 
-                className="group/button flex flex-1 items-center justify-center gap-2 rounded-xl border border-color-border bg-background/80 backdrop-blur px-4 py-3 text-sm font-medium text-gray-600 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md active:shadow-sm dark:text-zinc-400 dark:hover:text-white"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path fillRule="evenodd" d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H4.262c.1-.596.386-1.096.778-1.488A2.25 2.25 0 017.25 2h6.5a2.25 2.25 0 012.238 1.012z" />
-                  <path fillRule="evenodd" d="M2.75 6.5a2.25 2.25 0 012.25-2.25h6.5a2.25 2.25 0 012.25 2.25v6.5a2.25 2.25 0 01-2.25 2.25h-6.5a2.25 2.25 0 01-2.25-2.25v-6.5z" />
-                </svg>
-                デッキを探す
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-100/50 to-white/50 opacity-0 transition-opacity group-hover/button:opacity-100 dark:from-white/5 dark:to-gray-400/5" />
+              <Link href="/decks" className="btn-secondary flex-1 group/button">
+                <span>デッキ一覧へ</span>
+                <div className="btn-overlay" />
               </Link>
               <button
-                className="action-button group/button relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-md transition-all hover:shadow-lg active:shadow-sm"
+                className="group/button relative flex flex-1 items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg active:shadow-sm"
+                style={{ background: 'var(--grad-accent)' }}
                 onClick={() => { setI(0); setReveal(false); setEarned(0); setDone(false) }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
                 </svg>
                 もう一度
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 transition-opacity group-hover/button:opacity-100 mix-blend-overlay" />
+                <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover/button:opacity-100 dark:bg-white/15" />
               </button>
             </div>
           </motion.div>
@@ -169,23 +192,19 @@ export default function QuickStudyPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Quick Study</h1>
-
-      {/* 進捗バー */}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-        <div className="h-full bg-black transition-all" style={{ width: `${progress}%` }} />
+      <h1 className="text-3xl font-bold tracking-tight">Quick Study</h1>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]">
+        <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-sm text-gray-500">{i + 1} / {SEED.length}</p>
+      <p className="text-sm text-[var(--c-text-muted)]">{i + 1} / {SEED.length}</p>
 
-      {/* カード */}
-      <motion.div 
-        className="rounded-2xl border border-color-border bg-background/80 backdrop-blur p-8 shadow-lg hover:shadow-xl"
+      <motion.div
+        className="task-card relative overflow-hidden rounded-2xl border p-8 shadow-lg hover:shadow-xl"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
-        <p className="font-numeric text-4xl font-bold tracking-tight text-gray-900 dark:text-white">{card.front}</p>
-
+        <p className="font-numeric text-[42px] font-bold tracking-tight">{card.front}</p>
         <AnimatePresence mode="wait">
           {reveal ? (
             <motion.div
@@ -196,9 +215,9 @@ export default function QuickStudyPage() {
               transition={{ duration: 0.2 }}
               className="mt-6 space-y-3"
             >
-              <p className="text-2xl font-bold tracking-tight text-gray-800 dark:text-gray-100" style={{ letterSpacing: '-0.02em' }}>{card.back}</p>
+              <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card.back}</p>
               {card.example && (
-                <p className="border-l-2 border-gray-200 pl-4 text-[15px] leading-relaxed text-gray-600 dark:border-zinc-700 dark:text-zinc-400">
+                <p className="task-input rounded-lg border px-4 py-3 text-[15px] leading-relaxed">
                   例）{card.example}
                 </p>
               )}
@@ -209,13 +228,12 @@ export default function QuickStudyPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mt-4 text-[15px] font-medium leading-relaxed text-gray-500 dark:text-zinc-400"
+              className="mt-4 text-[15px] font-medium leading-relaxed text-[var(--c-text-muted)]"
             >
               答えを見るには「Reveal」を押すか、スペースキーを押してください
             </motion.p>
           )}
         </AnimatePresence>
-      </motion.div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           {!reveal ? (
@@ -226,10 +244,10 @@ export default function QuickStudyPage() {
               className="reveal-button group relative overflow-hidden rounded-xl px-8 py-3 text-sm font-medium shadow-lg transition-all hover:shadow-xl"
             >
               <span className="relative z-10 flex items-center gap-2">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  viewBox="0 0 20 20" 
-                  fill="currentColor" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
                   className="h-4 w-4 transition-transform duration-500 group-hover:rotate-180"
                 >
                   <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
@@ -247,12 +265,27 @@ export default function QuickStudyPage() {
                 <ImportedGradeButton label="Good" onClick={() => onGrade('Good')} />
                 <ImportedGradeButton label="Easy" onClick={() => onGrade('Easy')} />
               </div>
-              <p className="text-sm text-gray-500 dark:text-zinc-400">
-                キーボードショートカット: 1: Again / 2: Hard / 3: Good / 4: Easy
-              </p>
+              <div className="flex items-center gap-2 rounded-lg bg-[var(--c-surface-alt)] px-3 py-2 text-sm text-[var(--c-text-secondary)]">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v8.5A2.25 2.25 0 0115.75 15h-3.105a3.501 3.501 0 001.1 1.677A.75.75 0 0113.26 18H6.74a.75.75 0 01-.484-1.323A3.501 3.501 0 007.355 15H4.25A2.25 2.25 0 012 12.75v-8.5zm1.5 0a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v7.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-7.5z" clipRule="evenodd" />
+                </svg>
+                <span>キーボードショートカット:</span>
+                <kbd className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-200">1</kbd>
+                <span>Again</span>
+                <span>/</span>
+                <kbd className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-200">2</kbd>
+                <span>Hard</span>
+                <span>/</span>
+                <kbd className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-200">3</kbd>
+                <span>Good</span>
+                <span>/</span>
+                <kbd className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-200">4</kbd>
+                <span>Easy</span>
+              </div>
             </div>
           )}
         </div>
+      </motion.div>
     </section>
   )
 }

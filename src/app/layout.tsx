@@ -5,13 +5,8 @@ import { Noto_Sans_JP, Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Avatar from '@/components/avatar'
 import { PointsBadge } from '@/components/points-badge'
-
-// これらはそのままOK
 import { PointsProvider } from './points-context'
 import { ToastProvider } from './toast-context'
-import ThemeToggle from '@/components/theme-toggle'
-
-import { ThemeProvider } from './theme-provider'
 
 const notoSansJP = Noto_Sans_JP({
   weight: ['400', '500', '700'],
@@ -41,56 +36,73 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja" className={`${notoSansJP.variable} ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
-        <meta name="color-scheme" content="light dark" />
+        <meta name="color-scheme" content="light" />
       </head>
-      <body className="min-h-dvh bg-gray-50 text-[15px] antialiased dark:bg-zinc-950">
-        <ThemeProvider>
+  <body className="min-h-dvh bg-[var(--c-bg)] text-[15px] antialiased">
         <PointsProvider>
-        <ToastProvider>
-      <header className="sticky top-0 z-50 backdrop-blur bg-background/80 border-b border-color-border">
-        <nav className="mx-auto flex h-20 max-w-5xl items-center justify-between px-8">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="text-lg font-semibold">evody</Link>
-            <div className="flex items-center gap-4 text-[15px]">
-              <Link href="/about">About</Link>
-              <Link href="/study/quick">Study</Link>
-              <Link href="/tasks">Tasks</Link>
-              <Link href="/decks">Decks</Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <PointsBadge />
-            <Link href="/profile">
-              <Avatar name="Y" size={24} />
-            </Link>
-          </div>
-        </nav>
-      </header>          <main className="mx-auto max-w-5xl px-4 py-12">{children}</main>
-
-          <footer className="border-t border-color-border bg-background/80 backdrop-blur">
-            <div className="mx-auto max-w-5xl px-8 py-6">
-              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  © {new Date().getFullYear()} evody - 効率的な学習をサポート
-                </p>
-                <nav className="flex gap-6 text-sm">
-                  <Link href="/about" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                    About
+          <ToastProvider>
+            {/* ヘッダー */}
+            <header className="sticky top-0 z-50 border-b border-[var(--c-border)] bg-[var(--c-surface)]/80 backdrop-blur">
+              <nav className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-4">
+                <div className="flex items-center gap-6">
+                  <Link href="/" className="text-lg font-medium">
+                    evody
                   </Link>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                    Twitter
-                  </a>
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                    GitHub
-                  </a>
-                </nav>
+                  <div className="flex items-center gap-4 text-sm">
+                    <Link href="/study/quick" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      クイック学習
+                    </Link>
+                    <Link href="/decks" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      デッキ
+                    </Link>
+                    <Link href="/tasks" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      タスク
+                    </Link>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <PointsBadge />
+                  <Link href="/profile" className="group relative cursor-pointer">
+                    <Avatar size="sm" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-md bg-[var(--c-surface)] px-2 py-1 text-xs text-[var(--c-text-secondary)] opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      プロフィール
+                    </div>
+                  </Link>
+                </div>
+              </nav>
+            </header>
+
+            {/* メインコンテンツ */}
+            <main className="mx-auto max-w-5xl p-6">
+              {children}
+            </main>
+
+            {/* フッター */}
+            <footer className="border-t border-[var(--c-border)] py-8">
+              <div className="mx-auto max-w-5xl px-6">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="order-2 sm:order-1">
+                    <p className="text-sm text-[var(--c-text-muted)]">
+                      © 2024 evody
+                    </p>
+                  </div>
+                  <nav className="order-1 -ml-2 -mt-2 flex flex-wrap sm:order-2">
+                    <Link href="/about" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      About
+                    </Link>
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      Twitter
+                    </a>
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      GitHub
+                    </a>
+                  </nav>
+                </div>
               </div>
-            </div>
-          </footer>
-        </ToastProvider>
+            </footer>
+          </ToastProvider>
         </PointsProvider>
-        </ThemeProvider>
       </body>
     </html>
   )

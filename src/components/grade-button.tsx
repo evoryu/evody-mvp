@@ -16,11 +16,11 @@ const scores = {
 } as const
 
 const variants = {
-  danger: 'border-red-500 bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 dark:from-red-600/90 dark:to-red-700/90 dark:border-red-500/30 dark:text-white dark:hover:from-red-500/90 dark:hover:to-red-600/90',
-  warning: 'border-amber-500 bg-gradient-to-br from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 dark:from-amber-500/90 dark:to-amber-600/90 dark:border-amber-500/30 dark:text-white dark:hover:from-amber-400/90 dark:hover:to-amber-500/90',
-  success: 'border-emerald-500 bg-gradient-to-br from-emerald-400 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 dark:from-emerald-600/90 dark:to-emerald-700/90 dark:border-emerald-500/30 dark:text-white dark:hover:from-emerald-500/90 dark:hover:to-emerald-600/90',
-  perfect: 'border-blue-500 bg-gradient-to-br from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 dark:from-blue-600/90 dark:to-blue-700/90 dark:border-blue-500/30 dark:text-white dark:hover:from-blue-500/90 dark:hover:to-blue-600/90',
-}
+  danger: { class: 'border-red-500 hover:brightness-110 dark:border-red-500/30', bg: 'var(--grad-danger)' },
+  warning: { class: 'border-amber-500 hover:brightness-110 dark:border-amber-500/30', bg: 'var(--grad-warning)' },
+  success: { class: 'border-emerald-500 hover:brightness-110 dark:border-emerald-500/30', bg: 'var(--grad-success)' },
+  perfect: { class: 'border-blue-500 hover:brightness-110 dark:border-blue-500/30', bg: 'var(--grad-info)' },
+} as const
 
 export function GradeButton({
   label,
@@ -34,11 +34,13 @@ export function GradeButton({
   return (
     <button
       className={cn(
-        'group relative rounded-xl border px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95',
-        variants[variant],
+  'group relative overflow-hidden rounded-xl border px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-surface)] hover:translate-y-[-1px] hover:scale-[1.02] hover:shadow-xl active:translate-y-0 active:scale-[0.985] active:shadow-lg',
+        'before:absolute before:inset-0 before:-z-10 before:opacity-0 before:transition-opacity before:duration-200 group-hover:before:opacity-100',
+        variants[variant].class,
         className
       )}
       title={`${label} (+${scores[label]}pt)`}
+      style={{ background: variants[variant].bg }}
       {...props}
     >
       <span className="relative z-10">{label}</span>

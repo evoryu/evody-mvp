@@ -7,6 +7,9 @@ import { getDeck, getDeckCards } from '@/lib/decks'
 import { GradeButton as ImportedGradeButton } from '@/components/grade-button'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { saveEpisode, formatEpisodePost } from '@/lib/episodes'
+import { logReview } from '@/lib/reviews'
+import { useSocial } from '@/app/social-context'
 
 type Props = { params: Promise<{ deckId: string }> } // ← params は Promise に
 
@@ -19,11 +22,26 @@ export default function StudySessionPage({ params }: Props) {
   const cards = getDeckCards(deckId)
   const { add } = usePoints()
   const { showToast } = useToast()
+  const social = React.useRef<null | ReturnType<typeof useSocial>>(null)
+  try { // Provider外では失敗するので握りつぶし
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    social.current = useSocial()
+  } catch {}
 
   const [i, setI] = React.useState(0)
   const [reveal, setReveal] = React.useState(false)
   const [earned, setEarned] = React.useState(0)
   const [done, setDone] = React.useState(false)
+  const [startedAt] = React.useState(() => Date.now())
+  const correctRef = React.useRef(0)
+  const incorrectRef = React.useRef(0)
+  const doneRef = React.useRef(done)
+  React.useEffect(() => { doneRef.current = done }, [done])
+  // 反応時間計測
+  const revealAtRef = React.useRef<number | null>(null)
+
+  // 現在のカード（レンダーおよび onGrade 用）
+  const card = cards[i]
 
   const next = React.useCallback(() => {
     setReveal(false)
@@ -32,123 +50,131 @@ export default function StudySessionPage({ params }: Props) {
   }, [i, cards?.length])
 
   const onGrade = React.useCallback((g: Grade) => {
+    let singleDelta: number | undefined
+    if (revealAtRef.current) {
+      const delta = Date.now() - revealAtRef.current
+      if (delta >= 0 && delta < 60000) singleDelta = delta
+      revealAtRef.current = null
+    }
     const pts = SCORE[g]
     setEarned(e => e + pts)
     add(pts)
+    if (g === 'Again') incorrectRef.current += 1
+    else correctRef.current += 1
+    try { if (card) logReview(card.id, deckId, g, Date.now(), singleDelta) } catch {}
     showToast(`${g}評価で ${pts}pt 獲得！`)
     next()
-  }, [add, next, showToast])
+  }, [add, next, showToast, card, deckId])
 
   // キーボードショートカットのハンドラ
   React.useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
+    if (doneRef.current) return
+    const handle = (e: KeyboardEvent) => {
       if (!reveal) {
         if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault()
           setReveal(true)
         }
         return
       }
-
-      const gradeMap: Record<string, Grade> = {
-        '1': 'Again',
-        '2': 'Hard',
-        '3': 'Good',
-        '4': 'Easy',
-      }
-
+      const gradeMap: Record<string, Grade> = { '1': 'Again', '2': 'Hard', '3': 'Good', '4': 'Easy' }
       if (gradeMap[e.key]) {
         onGrade(gradeMap[e.key])
       }
     }
-
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
+
+  const progress = Math.round(((done ? cards.length : i) / cards.length) * 100)
+
+  // 完了時Episode保存 + 自動投稿
+  React.useEffect(() => {
+    if (!done) return
+    if (!deck) return
+    const ep = saveEpisode({
+      kind: 'deck',
+      deckId: deckId,
+      startedAt,
+      finishedAt: Date.now(),
+      correct: correctRef.current,
+      incorrect: incorrectRef.current,
+      points: earned,
+    })
+    try {
+      const flag = localStorage.getItem('evody:autoPostEpisodes')
+      if (flag === '1' && social.current) {
+        social.current.create(formatEpisodePost(ep))
+        showToast('学習完了をフィードに投稿しました')
+      }
+    } catch {}
+  }, [done, deck, deckId, startedAt, earned, showToast])
 
   if (!deck || cards.length === 0) {
     return <p className="text-red-600">デッキが見つからないか、カードがありません。</p>
   }
 
-  const card = cards[i]
-  const progress = Math.round(((done ? cards.length : i) / cards.length) * 100)
-
   if (done) {
     return (
       <section className="space-y-6">
         <h1 className="text-2xl font-bold">{deck.name}</h1>
-        <motion.div 
-          className="task-card overflow-hidden rounded-2xl border shadow-lg"
+        <motion.div
+          className="overflow-hidden rounded-2xl border bg-[var(--c-surface)]/80 backdrop-blur shadow-lg dark:border-[var(--c-border)]/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", duration: 0.6 }}
+          transition={{ type: 'spring', duration: 0.6 }}
         >
-          {/* ヘッダー部分 */}
-          <div className="border-b bg-gradient-to-br from-emerald-50 to-blue-50 px-6 py-8 dark:border-zinc-800 dark:from-emerald-950/30 dark:to-blue-950/30">
+          <div className="border-b px-8 py-10 dark:border-[var(--c-border)]/50">
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", delay: 0.2 }}
+              transition={{ type: 'spring', delay: 0.15 }}
               className="mb-2 flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="text-2xl font-bold">セッション完了！</h2>
+              <h2 className="text-xl font-bold">セッション完了！</h2>
             </motion.div>
-            <motion.div
+            <motion.p
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center text-gray-600 dark:text-zinc-400"
+              transition={{ delay: 0.3 }}
+              className="text-center text-sm text-[var(--c-text-secondary)]"
             >
-              お疲れ様でした！学習を継続することで、より効果的に記憶を定着できます。
-            </motion.div>
+              お疲れさまです。継続が定着の近道です。
+            </motion.p>
           </div>
-
-          {/* 獲得ポイント */}
-          <motion.div
-            className="space-y-4 p-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          >
-            <div className="flex items-center justify-center gap-4">
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-500 dark:text-zinc-400">獲得ポイント</div>
-                <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                  {earned} pt
+          <motion.div className="space-y-4 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
+            <div className="flex items-center justify-center gap-6">
+              <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
+                <div className="text-center">
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">獲得ポイント</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{earned}</div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-500 dark:text-zinc-400">学習カード</div>
-                <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                  {cards.length}枚
+              <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
+                <div className="text-center">
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{cards.length}</div>
                 </div>
               </div>
             </div>
-
-            {/* アクションボタン */}
             <div className="mt-6 flex gap-3">
-              <Link 
-                href="/decks" 
-                className="task-input group/button relative flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-600 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md active:shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50 dark:hover:text-white"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path fillRule="evenodd" d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H4.262c.1-.596.386-1.096.778-1.488A2.25 2.25 0 017.25 2h6.5a2.25 2.25 0 012.238 1.012z" />
-                  <path fillRule="evenodd" d="M2.75 6.5a2.25 2.25 0 012.25-2.25h6.5a2.25 2.25 0 012.25 2.25v6.5a2.25 2.25 0 01-2.25 2.25h-6.5a2.25 2.25 0 01-2.25-2.25v-6.5z" />
-                </svg>
-                <span className="relative z-10">デッキ一覧へ</span>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-100/50 to-white/50 opacity-0 transition-opacity group-hover/button:opacity-100 dark:from-white/5 dark:to-gray-400/5" />
+              <Link href="/decks" className="btn-secondary flex-1 group/button">
+                <span>デッキ一覧へ</span>
+                <div className="btn-overlay" />
               </Link>
               <button
-                className="action-button group/button relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-md transition-all hover:shadow-lg active:shadow-sm"
+                className="group/button relative flex flex-1 items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg active:shadow-sm"
+                style={{ background: 'var(--grad-accent)' }}
                 onClick={() => { setI(0); setReveal(false); setEarned(0); setDone(false) }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
                 </svg>
-                <span className="relative z-10">もう一度</span>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 transition-opacity group-hover/button:opacity-100 dark:from-blue-500/80 dark:to-cyan-400/80" />
+                もう一度
+                <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover/button:opacity-100 dark:bg-white/15" />
               </button>
             </div>
           </motion.div>
@@ -161,10 +187,10 @@ export default function StudySessionPage({ params }: Props) {
     <section className="space-y-6">
       <h1 className="text-2xl font-bold">{deck.name}</h1>
 
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-        <div className="h-full bg-black transition-all" style={{ width: `${progress}%` }} />
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]">
+        <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-sm text-gray-500">{i + 1} / {cards.length}</p>
+      <p className="text-sm text-[var(--c-text-muted)]">{i + 1} / {cards.length}</p>
 
       <motion.div 
         className="task-card overflow-hidden rounded-2xl border p-8 shadow-lg hover:shadow-xl"
@@ -186,7 +212,7 @@ export default function StudySessionPage({ params }: Props) {
             >
               <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card.back}</p>
               {card.example && (
-                <p className="border-l-2 border-gray-200 pl-4 text-[15px] leading-relaxed text-gray-600 dark:border-zinc-700 dark:text-gray-400">
+                <p className="border-l-2 pl-4 text-[15px] leading-relaxed text-[var(--c-text-secondary)] border-[var(--c-border)] dark:border-[var(--c-border-strong)]">
                   例）{card.example}
                 </p>
               )}
@@ -197,7 +223,7 @@ export default function StudySessionPage({ params }: Props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mt-4 text-[15px] font-medium leading-relaxed text-gray-600 dark:text-gray-400"
+              className="mt-4 text-[15px] font-medium leading-relaxed text-[var(--c-text-muted)]"
             >
               答えを見るには「Reveal」を押すか、スペースキーを押してください
             </motion.p>
@@ -208,7 +234,7 @@ export default function StudySessionPage({ params }: Props) {
           {!reveal ? (
             <motion.button
               className="action-button group relative overflow-hidden rounded-xl px-8 py-3 text-sm font-medium shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
-              onClick={() => setReveal(true)}
+              onClick={() => { setReveal(true); revealAtRef.current = Date.now() }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -239,7 +265,7 @@ export default function StudySessionPage({ params }: Props) {
                 <ImportedGradeButton label="Good" onClick={() => onGrade('Good')} />
                 <ImportedGradeButton label="Easy" onClick={() => onGrade('Easy')} />
               </div>
-              <p className="text-sm text-gray-500 dark:text-zinc-400">
+              <p className="text-sm text-[var(--c-text-muted)]">
                 キーボードショートカット: 1: Again / 2: Hard / 3: Good / 4: Easy
               </p>
             </div>

@@ -93,21 +93,21 @@ const toggleDone = (id: string) => {
       <form onSubmit={addTask} className="task-card rounded-xl border p-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-3">
           <input
-            className="task-input rounded-lg border px-3 py-2"
+            className="form-field"
             placeholder="タイトル（例：英単語30個）"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
         {/* subject */}
           <input
-            className="task-input rounded-lg border px-3 py-2"
+            className="form-field"
             placeholder="科目（例：英語）"
             value={subject}
             onChange={e => setSubject(e.target.value)}
           />
         {/* minutes */}
           <input
-            className="task-input rounded-lg border px-3 py-2"
+            className="form-field"
             placeholder="所要（分）"
             inputMode="numeric"
             value={minutes}
@@ -125,7 +125,7 @@ const toggleDone = (id: string) => {
       {/* 一覧 */}
       <ul className="space-y-3">
         {tasks.length === 0 && (
-          <li className="text-gray-500">まだタスクがありません。上のフォームから追加してね。</li>
+          <li className="text-[var(--c-text-muted)]">まだタスクがありません。上のフォームから追加してね。</li>
         )}
         {tasks.map(t => (
           <li key={t.id} className="task-card rounded-xl border p-4">
@@ -138,17 +138,17 @@ const toggleDone = (id: string) => {
                   onChange={() => toggleDone(t.id)}
                 />
                 <div>
-                  <p className={`font-semibold ${t.done ? 'line-through text-gray-400 dark:text-gray-600' : ''}`}>
+                  <p className={`font-semibold ${t.done ? 'line-through text-[var(--c-text-disabled)]' : ''}`}>
                     {t.title}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-[var(--c-text-muted)]">
                     {t.subject || '—'} ・ {t.minutes ? `${t.minutes}分` : '—'}
                   </p>
                 </div>
               </label>
               <button
                 onClick={() => removeTask(t.id)}
-                className="task-input rounded-lg border px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="btn-secondary px-3 py-1 text-sm"
               >
                 削除
               </button>

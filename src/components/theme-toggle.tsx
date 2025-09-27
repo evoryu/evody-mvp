@@ -15,8 +15,9 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text-secondary)] transition-colors hover:bg-[var(--c-hover-layer)] hover:text-[var(--c-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-surface)] dark:text-[var(--c-text-secondary)]"
       title={isDark ? 'ライトモード' : 'ダークモード'}
+      aria-label={isDark ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
     >
       {isDark ? (
         <Sun size={18} />

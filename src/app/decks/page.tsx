@@ -9,7 +9,7 @@ export default function DecksPage() {
     <section className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">デッキ一覧</h1>
-        <p className="text-[15px] text-gray-600 dark:text-gray-400">
+  <p className="text-[15px] text-[var(--c-text-secondary)]">
           全てのデッキ一覧から、学習したいデッキを選んで学習を始めましょう
         </p>
       </div>
@@ -27,7 +27,7 @@ export default function DecksPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
           >
-            <div className="task-card group relative overflow-hidden rounded-2xl border p-6">
+            <div className="task-card group relative overflow-hidden rounded-2xl p-6 transition-all">
               {/* タイトルへのリンク */}
               <Link 
                 href={`/decks/${deck.id}`}
@@ -37,11 +37,11 @@ export default function DecksPage() {
 
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-bold tracking-tight group-hover:text-gray-600 dark:group-hover:text-gray-300">
+                  <h2 className="text-lg font-bold tracking-tight group-hover:text-[var(--c-text-secondary)]">
                     {deck.name}
                   </h2>
                   {deck.description && (
-                    <p className="text-[15px] leading-relaxed text-gray-600 dark:text-gray-400">
+                    <p className="text-[15px] leading-relaxed text-[var(--c-text-secondary)]">
                       {deck.description}
                     </p>
                   )}

@@ -28,17 +28,22 @@ export function Toast({ toast, onDismiss }: Props) {
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className="task-input relative rounded-lg border px-4 py-2 pr-8 shadow-lg"
+      transition={{ 
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }}
+      className="task-input relative overflow-hidden rounded-lg border px-4 py-2.5 pr-8 shadow-lg backdrop-blur"
     >
-      <p className="text-sm font-medium">
+      <p className="text-sm font-medium relative z-10">
         {toast.message}
       </p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="absolute right-1 top-1 p-1 text-gray-400 hover:text-gray-500 dark:text-zinc-500 dark:hover:text-zinc-300"
+        aria-label="閉じる"
+        className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--c-text-muted)] hover:text-[var(--c-text-secondary)] hover:bg-[var(--c-hover-layer)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-surface)] transition-colors"
       >
-        <X size={14} />
+        <X size={14} strokeWidth={1.75} />
       </button>
     </motion.div>
   )

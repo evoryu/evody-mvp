@@ -4,13 +4,14 @@ import React from 'react'
 import Image from 'next/image'
 
 type Props = {
-  name: string
-  size?: number // ピクセル（デフォルト 96）
+  name?: string
+  size?: 'sm' | 'md' // sm: 32px, md: 96px
 }
 
 const KEY = 'evody:avatarV1'
 
-export default function Avatar({ name, size = 96 }: Props) {
+export default function Avatar({ name = 'ユーザー', size = 'md' }: Props) {
+  const sizeInPx = size === 'sm' ? 32 : 96
   const [dataUrl, setDataUrl] = React.useState<string | null>(null)
 
   // 初期読込
@@ -19,89 +20,87 @@ export default function Avatar({ name, size = 96 }: Props) {
     if (raw) setDataUrl(raw)
   }, [])
 
-  // 画像選択 → dataURL へ変換して保存
-  const onPick: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+  // 画像をアップロードした時の処理
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const url = String(reader.result)
-      setDataUrl(url)
-      localStorage.setItem(KEY, url)
+
+    try {
+      // 画像をリサイズ
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to get canvas context')
+
+      const img = await createImageBitmap(file)
+      const size = Math.min(img.width, img.height)
+      const x = (img.width - size) / 2
+      const y = (img.height - size) / 2
+
+      canvas.width = 192 // 2倍サイズで保存
+      canvas.height = 192
+      ctx.drawImage(img, x, y, size, size, 0, 0, 192, 192)
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+      localStorage.setItem(KEY, dataUrl)
+      setDataUrl(dataUrl)
+
+    } catch (err) {
+      console.error('Failed to process image:', err)
+      alert('画像の処理に失敗しました')
     }
-    reader.readAsDataURL(file)
   }
 
-  const clear = () => {
-    setDataUrl(null)
-    localStorage.removeItem(KEY)
-  }
-
-  // 名前からイニシャルを作成
+  // ユーザー名のイニシャルを取得
   const initials = name
-    ? name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map(s => s[0]?.toUpperCase() ?? '')
-        .join('') || 'YOU'
-    : 'YOU'
-
-  // 名前から背景色（簡易）
-  const hue =
-    Array.from(name || 'evody').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) %
-    360
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 
   return (
     <div className="relative">
-      <div
-        className="relative overflow-hidden rounded-full border bg-gray-100"
-        style={{ width: size, height: size }}
-        title={name || 'avatar'}
+      <label
+        htmlFor="avatar-input"
+        className="group relative block cursor-pointer overflow-hidden rounded-full bg-gradient-to-br from-gray-500 to-gray-700 hover:from-gray-400 hover:to-gray-600"
+        style={{ width: sizeInPx, height: sizeInPx }}
       >
         {dataUrl ? (
           <Image
             src={dataUrl}
-            alt="avatar"
+            alt="アバター"
+            width={sizeInPx}
+            height={sizeInPx}
             className="h-full w-full object-cover"
-            draggable={false}
-            width={size}
-            height={size}
-            style={{ objectFit: 'cover' }}
-            unoptimized
           />
         ) : (
-          <div
-            className="flex h-full w-full items-center justify-center text-white"
-            style={{ backgroundColor: `hsl(${hue} 70% 45%)` }}
-          >
-            <span style={{ fontSize: `${size * 0.4}px` }} className="select-none font-bold">{initials}</span>
+          <div className="flex h-full w-full items-center justify-center">
+            <span 
+              style={{ fontSize: `${sizeInPx * 0.4}px` }} 
+              className="select-none font-bold text-white"
+            >
+              {initials}
+            </span>
           </div>
         )}
-        
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50">
-          <div className="flex gap-2 text-white" style={{ fontSize: `${size * 0.3}px` }}>
-            <label className="cursor-pointer rounded px-2 py-0.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm">
-              編集
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onPick}
-              />
-            </label>
-            {dataUrl && (
-              <button
-                onClick={clear}
-                className="rounded px-2 py-0.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-                title="アバターをリセット"
-              >
-                削除
-              </button>
-            )}
+
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <div 
+            className="flex gap-2 text-white" 
+            style={{ fontSize: `${sizeInPx * 0.3}px` }}
+          >
+            <span className="font-medium">編集</span>
           </div>
         </div>
-      </div>
+      </label>
+
+      <input
+        id="avatar-input"
+        type="file"
+        accept="image/*"
+        onChange={onFileChange}
+        className="hidden"
+      />
     </div>
   )
 }
