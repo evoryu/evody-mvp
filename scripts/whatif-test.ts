@@ -71,9 +71,17 @@ interface Summary {
     peakDeltaFails: number | undefined
   }
 }
+const args = process.argv.slice(2)
+const useJsonl = args.includes('--jsonl')
+
 function log(title: string, data: Summary){
-  console.log(`\n=== ${title} ===`)
-  console.log(JSON.stringify(data, null, 2))
+  if (useJsonl) {
+    const line = { title, ...data }
+    console.log(JSON.stringify(line))
+  } else {
+    console.log(`\n=== ${title} ===`)
+    console.log(JSON.stringify(data, null, 2))
+  }
 }
 
 // Helper to extract minimal fields for readability
@@ -135,5 +143,8 @@ function summarize(result: ReturnType<typeof simulateNewCardsImpact>): Summary {
   const single = simulateNewCardsImpact(10, 7, now)
   log('single add=10 horizon=7', summarize(single))
 
-  console.log('\nNOTE: Reaction time / again rate fallback flags depend on available localStorage review history. \nIf sample is insufficient you should see usedFallback or againRateFallbackUsed= true.')
+  if (!useJsonl) {
+    console.log('\nNOTE: Reaction time / again rate fallback flags depend on available localStorage review history. \nIf sample is insufficient you should see usedFallback or againRateFallbackUsed= true.')
+    console.log('Tip: use --jsonl for machine-friendly one-line JSON output per scenario.')
+  }
 })();

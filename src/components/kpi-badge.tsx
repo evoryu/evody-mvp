@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { motion, useAnimation } from 'framer-motion'
 
 export interface KpiBadgeProps {
   label: string
@@ -18,16 +19,28 @@ const toneClass: Record<NonNullable<KpiBadgeProps['tone']>, string> = {
 }
 
 export function KpiBadge({ label, value, extra, tone = 'neutral', title, className }: KpiBadgeProps) {
+  const controls = useAnimation()
+  useEffect(()=>{
+    // mount animation
+    controls.start({ opacity: 1, scale: 1, transition: { duration: 0.22, ease: 'easeOut' } })
+  }, [controls])
+  useEffect(()=>{
+    // pulse on tone change
+    controls.start({ scale: [1, 1.06, 1], transition: { duration: 0.28, times:[0,0.4,1], ease: 'easeOut' } })
+  }, [tone, controls])
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={controls}
       className={`px-2 py-1 rounded-md border text-[10px] font-medium flex items-center gap-1 ${toneClass[tone]} ${className || ''}`}
       title={title}
       role="listitem"
+      layout
     >
       <span className="opacity-70 font-normal">{label}</span>
       <span className="tabular-nums">{value}</span>
       {extra}
-    </div>
+    </motion.div>
   )
 }
 

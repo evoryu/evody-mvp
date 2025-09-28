@@ -202,3 +202,64 @@ Contrast チェック: `node scripts/contrast-check.js --min=4.5` を追加ベ�
 - ダッシュボードカード背景の微細グラデーション統一
 
 ---
+
+## What-if モーダル & KPI バッジ (Phase 1.30A+ 拡張)
+
+### コンポーネント分離
+
+- `WhatIfDialog` を `Profile` ページ本体から独立 (`src/components/whatif-dialog.tsx`)
+- 目的: 巨大 JSX の肥大化を防ぎ、モーダル内 UI (Badges / Collapsible) を再利用容易にする
+- 依存: `KpiBadge`, `CollapsibleSection`, `CHAIN_PRESETS`
+
+### KPI バッジアニメーション
+
+- ライブラリ: `framer-motion`
+- 仕様:
+  - 初期: `opacity:0, scale:0.85` → 0.22s easeOut で `opacity:1, scale:1`
+  - tone 変化時: `scale` を `[1,1.06,1]` に 0.28s パルス（過度な点滅抑止）
+  - `layout` プロップで並び入替え時のスムーズさを保持
+- 目的: 負荷差分を視覚的に軽く強調しつつ、視線負荷を増やしすぎない最小演出
+
+### 折りたたみセクション
+
+- `CollapsibleSection` 汎用化: Early Failures / Time Load / Chain Summary 共通
+- Prop: `id, title, collapsed, onToggle, summary, small`
+- アクセシビリティ: `aria-expanded`, `aria-controls` を親コンテナに付与
+
+### 早期失敗モデル (Early Failures)
+
+- 再注入は Day2 集約の簡易近似。`Again率 * Week1 新規` (clamp 2%〜55%)
+- サンプル不足 (>=40 必要) で fallback rate ラベル表示
+- `Peak(+fails)` を別バッジで表示（差分色付け）
+
+### Time Load 指標
+
+- 直近反応時間サンプル (p95 トリム後) の中央値を使用
+- `件数 * medianSec / 60` → 0.1 分四捨五入
+- 表示: `Peak Min`, `W1 Total`, 日別 `D0..D6` 分布 (バッジ風チップ)
+- fallback 時はバッジ脚注に `(fallback)`
+
+### JSON Lines 検証出力
+
+- `scripts/whatif-test.ts --jsonl` で 1 シナリオ 1 行 JSON
+  - 機械処理: `jq -r '.title,.deltaPeak'` などで容易に抽出
+  - 従来モード: 整形 JSON + 見出し
+
+### デザイン意図まとめ
+
+| 要素 | 意図 | 重点 | 妨げない工夫 |
+| ---- | ---- | ---- | ------------ |
+| KPI バッジ | 追加負荷の瞬時把握 | 色 + 短い遷移 | パルス幅を 1.06 に抑制 |
+| Collapsible | 二次情報の情報密度制御 | 折りたたみ | 既定閉状態で初期ノイズ減 |
+| Early Failures | リスク見積 | Again率＋ピーク再計算 | モデル簡易説明フッタ |
+| Time Load | 時間コストの把握 | Peak/W1 分 | 0.1 分丸めで桁ノイズ回避 |
+| JSONL 出力 | 自動検証・統計 | ログ処理 | オプションフラグで UI 表示と分離 |
+
+### 今後の拡張アイデア
+
+- バッジ差分を数値レンジに応じた subtle bar sparkline へ昇格 (e.g. peakBefore→after の横棒)
+- Time Load の信頼度指標 (サンプル n / IQR) を Tooltip 化
+- Early Failures を Day2 固定→分散 (幾何列) モード比較トグル
+- what-if 設定の shareable permalink (クエリシリアライズ)
+
+---

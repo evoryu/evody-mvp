@@ -27,8 +27,8 @@ Profile ページの「What-if」から追加新カード数を入力すると 7
 
 - Peak / Median: 7 日内最大・中央値
 - Peak Δ%, Peak(+fails): 早期失敗 (Again) 再注入を考慮したピーク再計算（Day2 に集約）
-- Exp Again: Week1 新カード * Again率 (2%〜55% clamp)。サンプル不足 (>=40 必要) 時 fallback rate 使用
-- Time Load: 直近反応時間サンプル (p95 除外) の中央値 * 件数 / 60 を 0.1 分丸め。Peak Min / W1 Min / 日別分布
+- Exp Again: Week1 新カード \* Again率 (2%〜55% clamp)。サンプル不足 (>=40 必要) 時 fallback rate 使用
+- Time Load: 直近反応時間サンプル (p95 除外) の中央値 \* 件数 / 60 を 0.1 分丸め。Peak Min / W1 Min / 日別分布
 - Chain Summary: 初期間隔プリセット (例 1/3/7) による Week1/2 再出現件数合計 (<= horizon 内)
 
 バッジ色: 赤=負荷増 / 緑=負荷減 / 灰=変化小 / 黄=注意 (Again件数など)
