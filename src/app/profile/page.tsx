@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { KpiBadge, decideDeltaTone } from '@/components/kpi-badge'
+import { CollapsibleSection } from '@/components/collapsible-section'
 import { usePoints } from '../points-context'
 import Avatar from '@/components/avatar'
 import { getStatsForToday, TodayStats, getStreak, StreakInfo, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyReactionTimes, getDailyDeckReactionTimes } from '@/lib/episodes'
@@ -1058,56 +1060,7 @@ export default function ProfilePage() {
               <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
                 {/* Summary Panel (Phase 1.30A UI refinement: key KPIs at a glance) */}
                 {whatIfResult && (
-                  <div className="mb-6" aria-label="What-if summary" role="group">
-                    {(() => {
-                      const peakBefore = whatIfResult.original.peak?.count ?? 0
-                      const peakAfter = whatIfResult.simulated.peak?.count ?? 0
-                      const peakDelta = peakAfter - peakBefore
-                      const peakDeltaPct = peakBefore>0 ? Math.round((peakDelta/peakBefore)*100) : 0
-                      const clsColor = (d:number) => d>0 ? 'bg-[var(--c-danger,#dc2626)]/20 text-[var(--c-danger,#dc2626)]' : d<0 ? 'bg-[var(--c-success,#059669)]/20 text-[var(--c-success,#059669)]' : 'bg-[var(--c-border)]/40 text-[var(--c-text-secondary)]'
-                      const neutral = 'bg-[var(--c-surface-alt)] text-[var(--c-text-secondary)]'
-                      const added = whatIfResult.additional
-                      const chainW1 = whatIfResult.chainWeek1Added
-                      const expFails = whatIfResult.expectedFailuresWeek1
-                      const againRate = whatIfResult.againRateSampled
-                      const peakWithFails = whatIfResult.expectedPeakWithFailures
-                      const peakWithFailsDelta = (peakWithFails ?? peakAfter) - peakAfter
-                      const tl = whatIfResult.timeLoad
-                      const peakMinBefore = tl?.peakTimeMinutesOriginal
-                      const peakMinAfter = tl?.peakTimeMinutesSimulated
-                      const peakMinDelta = (peakMinAfter ?? 0) - (peakMinBefore ?? 0)
-                      const w1MinBefore = tl?.week1TotalMinutesOriginal
-                      const w1MinAfter = tl?.week1TotalMinutesSimulated
-                      const w1MinDelta = (w1MinAfter ?? 0) - (w1MinBefore ?? 0)
-                      const badge = (label:string, value:React.ReactNode, extra?:React.ReactNode, cls?:string, title?:string) => (
-                        <div key={label} className={`px-2 py-1 rounded-md border text-[10px] font-medium flex items-center gap-1 ${cls||''}`} title={typeof title==='string'? title: undefined}>
-                          <span className="opacity-70 font-normal">{label}</span>
-                          <span className="tabular-nums">{value}</span>
-                          {extra}
-                        </div>
-                      )
-                      const badges: React.ReactNode[] = []
-                      badges.push(badge('Added', '+'+added))
-                      badges.push(badge('Peak', peakBefore+'→'+peakAfter, peakDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakDelta>0?'+':''}{peakDelta} ({peakDeltaPct}%)</span>, clsColor(peakDelta)))
-                      if (peakMinAfter!==undefined && peakMinBefore!==undefined) {
-                        badges.push(badge('Peak Min', peakMinBefore+'→'+peakMinAfter, peakMinDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakMinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakMinDelta>0?'+':''}{peakMinDelta}</span>, clsColor(peakMinDelta)))
-                      }
-                      if (w1MinAfter!==undefined && w1MinBefore!==undefined) {
-                        badges.push(badge('W1 Min', w1MinBefore+'→'+w1MinAfter, w1MinDelta!==0 && <span className={`ml-0.5 text-[9px] ${w1MinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{w1MinDelta>0?'+':''}{w1MinDelta}</span>, clsColor(w1MinDelta)))
-                      }
-                      if (chainW1) badges.push(badge('W1+', chainW1, null, neutral, 'Week1 offset cards (<=D6)'))
-                      if (expFails!==undefined) badges.push(badge('Exp Again', expFails, againRate!=null && <span className="text-[8px] opacity-70">@{Math.round((againRate||0)*100)}%</span>, expFails>0? 'bg-[var(--c-warn,#d97706)]/20 text-[var(--c-warn,#d97706)]':'bg-[var(--c-border)]/40 text-[var(--c-text-secondary)]', 'Expected early Again count (Week1)'))
-                      if (peakWithFails!==undefined && peakWithFails !== peakAfter) {
-                        badges.push(badge('Peak(+fails)', peakAfter+'→'+peakWithFails, peakWithFailsDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakWithFailsDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakWithFailsDelta>0?'+':''}{peakWithFailsDelta}</span>, clsColor(peakWithFailsDelta)))
-                      }
-                      return <div className="flex flex-wrap gap-2" role="list">{badges.map((b,i)=>(<div key={i} role="listitem">{b}</div>))}</div>
-                    })()}
-                    <div className="mt-1 text-[8px] text-[var(--c-text-muted)] leading-snug flex flex-wrap gap-x-4 gap-y-1">
-                      <span>色: 赤=負荷増 / 緑=負荷減 / 灰=変化小</span>
-                      <span>Peak Min=ピーク日の推定所要分</span>
-                      {whatIfResult.timeLoad?.usedFallback && <span>Time Load: fallback median</span>}
-                    </div>
-                  </div>
+                  <WhatIfSummaryBadges whatIfResult={whatIfResult} />
                 )}
                 <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
                   {/* Left column */}
@@ -1180,79 +1133,69 @@ export default function ProfilePage() {
                           <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
                           <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
                           {whatIfResult.expectedPeakWithFailures !== undefined && (
-                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseEarly(c=>!c)} aria-expanded={!collapseEarly} aria-controls="wf-early">
-                                <span>Early Failures</span>
-                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseEarly? 'Expand Early Failures':'Collapse Early Failures'}>{collapseEarly? '+':'−'}</button>
-                                {whatIfResult.againRateSampled !== undefined && (
-                                  <span className="text-[8px] font-normal text-[var(--c-text-muted)]">
-                                    Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%
-                                    {whatIfResult.againRateFallbackUsed && ' (fallback)'}
-                                    {typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
-                                  </span>
-                                )}
-                              </div>
-                              {!collapseEarly && (
+                            <CollapsibleSection
+                              id="wf-early"
+                              title="Early Failures"
+                              collapsed={collapseEarly}
+                              onToggle={()=> setCollapseEarly(c=>!c)}
+                              summary={whatIfResult.againRateSampled !== undefined && (
                                 <>
-                                  <div id="wf-early" className="flex flex-wrap gap-x-4 gap-y-1">
-                                    {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
-                                    <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
-                                      <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
-                                    )}</span>
-                                  </div>
-                                  <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                                  Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%{whatIfResult.againRateFallbackUsed && ' (fallback)'}{typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
                                 </>
                               )}
-                            </div>
+                              small
+                            >
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
+                                <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
+                                  <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
+                                )}</span>
+                              </div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                            </CollapsibleSection>
                           )}
                           {whatIfResult.timeLoad && (
-                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseTime(c=>!c)} aria-expanded={!collapseTime} aria-controls="wf-time">
-                                <span>Time Load</span>
-                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseTime? 'Expand Time Load':'Collapse Time Load'}>{collapseTime? '+':'−'}</button>
-                                <span className="text-[8px] font-normal text-[var(--c-text-muted)]">
-                                  per-card {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (fallback)'} n={whatIfResult.timeLoad.sampleSize}
-                                </span>
+                            <CollapsibleSection
+                              id="wf-time"
+                              title="Time Load"
+                              collapsed={collapseTime}
+                              onToggle={()=> setCollapseTime(c=>!c)}
+                              summary={
+                                <>per-card {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (fallback)'} n={whatIfResult.timeLoad.sampleSize}</>
+                              }
+                              small
+                            >
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                <span>Peak Min <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
+                                  <span className={whatIfResult.timeLoad.peakTimeDeltaMinutes>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.timeLoad.peakTimeDeltaMinutes>0?'+':''}{whatIfResult.timeLoad.peakTimeDeltaMinutes})</span>
+                                )}</span>
+                                {whatIfResult.timeLoad.week1TotalMinutesSimulated !== undefined && (
+                                  <span>W1 Total <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
+                                )}
                               </div>
-                              {!collapseTime && (
-                                <>
-                                  <div id="wf-time" className="flex flex-wrap gap-x-4 gap-y-1">
-                                    <span>Peak Min <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
-                                      <span className={whatIfResult.timeLoad.peakTimeDeltaMinutes>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.timeLoad.peakTimeDeltaMinutes>0?'+':''}{whatIfResult.timeLoad.peakTimeDeltaMinutes})</span>
-                                    )}</span>
-                                    {whatIfResult.timeLoad.week1TotalMinutesSimulated !== undefined && (
-                                      <span>W1 Total <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
-                                    )}
-                                  </div>
-                                  <div className="mt-1 flex flex-wrap gap-1 text-[8px] items-center">
-                                    {whatIfResult.timeLoad.simulatedMinutesPerDay.map((m,i)=>(
-                                      <span key={i} className="px-1 py-0.5 rounded bg-[var(--c-surface-alt)]/60 border">
-                                        D{i}:{m}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="text-[8px] text-[var(--c-text-muted)]">Median秒 * 件数 / 60 を 0.1 分丸め。早期失敗増も反映。</div>
-                                </>
-                              )}
-                            </div>
+                              <div className="mt-1 flex flex-wrap gap-1 text-[8px] items-center">
+                                {whatIfResult.timeLoad.simulatedMinutesPerDay.map((m,i)=>(
+                                  <span key={i} className="px-1 py-0.5 rounded bg-[var(--c-surface-alt)]/60 border">D{i}:{m}</span>
+                                ))}
+                              </div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">Median秒 * 件数 / 60 を 0.1 分丸め。早期失敗増も反映。</div>
+                            </CollapsibleSection>
                           )}
                           {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
-                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseChain(c=>!c)} aria-expanded={!collapseChain} aria-controls="wf-chain">
-                                <span>Chain Summary</span>
-                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseChain? 'Expand Chain Summary':'Collapse Chain Summary'}>{collapseChain? '+':'−'}</button>
-                                <span className="text-[8px] font-normal text-[var(--c-text-muted)]">({CHAIN_PRESETS[chainPreset].join('/')})</span>
+                            <CollapsibleSection
+                              id="wf-chain"
+                              title="Chain Summary"
+                              collapsed={collapseChain}
+                              onToggle={()=> setCollapseChain(c=>!c)}
+                              summary={<>( {CHAIN_PRESETS[chainPreset].join('/')})</>}
+                              small
+                            >
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
+                                {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
                               </div>
-                              {!collapseChain && (
-                                <>
-                                  <div id="wf-chain" className="flex flex-wrap gap-x-4 gap-y-1">
-                                    {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
-                                    {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
-                                  </div>
-                                  <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
-                                </>
-                              )}
-                            </div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
+                            </CollapsibleSection>
                           )}
                         </div>
                       </div>
@@ -1455,5 +1398,99 @@ export default function ProfilePage() {
         </div>
       )}
     </section>
+  )
+}
+
+// --- Extracted helper component: WhatIf summary badge list ---
+function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
+  const peakBefore = whatIfResult.original.peak?.count ?? 0
+  const peakAfter = whatIfResult.simulated.peak?.count ?? 0
+  const peakDelta = peakAfter - peakBefore
+  const peakDeltaPct = peakBefore>0 ? Math.round((peakDelta/peakBefore)*100) : 0
+  const added = whatIfResult.additional
+  const chainW1 = whatIfResult.chainWeek1Added
+  const expFails = whatIfResult.expectedFailuresWeek1
+  const againRate = whatIfResult.againRateSampled
+  const peakWithFails = whatIfResult.expectedPeakWithFailures
+  const peakWithFailsDelta = (peakWithFails ?? peakAfter) - peakAfter
+  const tl = whatIfResult.timeLoad
+  const peakMinBefore = tl?.peakTimeMinutesOriginal
+  const peakMinAfter = tl?.peakTimeMinutesSimulated
+  const peakMinDelta = (peakMinAfter ?? 0) - (peakMinBefore ?? 0)
+  const w1MinBefore = tl?.week1TotalMinutesOriginal
+  const w1MinAfter = tl?.week1TotalMinutesSimulated
+  const w1MinDelta = (w1MinAfter ?? 0) - (w1MinBefore ?? 0)
+
+  const badges: React.ReactNode[] = []
+  badges.push(
+    <KpiBadge key="added" label="Added" value={'+'+added} tone="neutral" />
+  )
+  badges.push(
+    <KpiBadge
+      key="peak"
+      label="Peak"
+      value={`${peakBefore}→${peakAfter}`}
+      extra={peakDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakDelta>0?'+':''}{peakDelta} ({peakDeltaPct}%)</span>}
+      tone={decideDeltaTone(peakDelta)}
+    />
+  )
+  if (peakMinAfter!==undefined && peakMinBefore!==undefined) {
+    badges.push(
+      <KpiBadge
+        key="peak-min"
+        label="Peak Min"
+        value={`${peakMinBefore}→${peakMinAfter}`}
+        extra={peakMinDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakMinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakMinDelta>0?'+':''}{peakMinDelta}</span>}
+        tone={decideDeltaTone(peakMinDelta)}
+      />
+    )
+  }
+  if (w1MinAfter!==undefined && w1MinBefore!==undefined) {
+    badges.push(
+      <KpiBadge
+        key="w1-min"
+        label="W1 Min"
+        value={`${w1MinBefore}→${w1MinAfter}`}
+        extra={w1MinDelta!==0 && <span className={`ml-0.5 text-[9px] ${w1MinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{w1MinDelta>0?'+':''}{w1MinDelta}</span>}
+        tone={decideDeltaTone(w1MinDelta)}
+      />
+    )
+  }
+  if (chainW1) {
+    badges.push(<KpiBadge key="w1plus" label="W1+" value={chainW1} tone="neutral" title="Week1 offset cards (<=D6)" />)
+  }
+  if (expFails!==undefined) {
+    badges.push(
+      <KpiBadge
+        key="exp-again"
+        label="Exp Again"
+        value={expFails}
+        extra={againRate!=null && <span className="text-[8px] opacity-70">@{Math.round((againRate||0)*100)}%</span>}
+        tone={expFails>0? 'warn':'muted'}
+        title="Expected early Again count (Week1)"
+      />
+    )
+  }
+  if (peakWithFails!==undefined && peakWithFails !== peakAfter) {
+    badges.push(
+      <KpiBadge
+        key="peak-fails"
+        label="Peak(+fails)"
+        value={`${peakAfter}→${peakWithFails}`}
+        extra={peakWithFailsDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakWithFailsDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakWithFailsDelta>0?'+':''}{peakWithFailsDelta}</span>}
+        tone={decideDeltaTone(peakWithFailsDelta)}
+      />
+    )
+  }
+
+  return (
+    <div className="mb-6" aria-label="What-if summary" role="group">
+      <div className="flex flex-wrap gap-2" role="list">{badges}</div>
+      <div className="mt-1 text-[8px] text-[var(--c-text-muted)] leading-snug flex flex-wrap gap-x-4 gap-y-1">
+        <span>色: 赤=負荷増 / 緑=負荷減 / 灰=変化小</span>
+        <span>Peak Min=ピーク日の推定所要分</span>
+        {whatIfResult.timeLoad?.usedFallback && <span>Time Load: fallback median</span>}
+      </div>
+    </div>
   )
 }
