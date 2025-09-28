@@ -1081,6 +1081,16 @@ export default function ProfilePage() {
                           <div>Median <strong>{whatIfResult.simulated.median}</strong> {whatIfResult.deltas.median!==0 && (<span className={whatIfResult.deltas.median>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.median>0?'+':''}{whatIfResult.deltas.median})</span>)}</div>
                           <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
                           <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
+                          {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
+                            <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5">Chain Summary</div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
+                                {whatIfResult.chainWeek2Added && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
+                              </div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+ = Day1+3 追加合計 / W2+ = Day7 (14d horizon 時)。</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

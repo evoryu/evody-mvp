@@ -363,22 +363,26 @@ UI 変更:
 背景: 多くの SRS (SM-2 系 / FSRS 推奨ステップ) は最初の 1 週間に複数回の短間隔レビュー (例: 1d→3d→7d) を挟む。従来の Phase 1.23/1.26 モデル (Day1 のみ) は 2 回目・3 回目レビューによる中期ピークを無視していた。
 
 スコープ (v1):
+
 - 固定オフセット {1,3,7} に同一枚数をそのまま加算 (確率分岐なし)
 - Horizon=7 の場合 Day7 は除外 (14d 拡張前提)
 - Deck 指定時は追加枚数すべてが選択デッキに属すると仮定し Day1/3/7 の比較を提示
 - Backlog 不変 (新カード nextDue >= 今日00:00)
 
 追加 API:
+
 ```ts
 simulateNewCardsImpactChained(additional: number, horizonDays=7): WhatIfResult
 simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizonDays=7): WhatIfResult
 ```
 
 `WhatIfResult` 拡張:
+
 - `chainDistribution: { dayOffset:number; added:number }[]`
 - `deckChainImpact`: Day1/3/7 / Peak / Week1 Total の Before/After
 
 アルゴリズム要点:
+
 1. original = getUpcomingReviewLoad(h)
 2. 有効オフセット集合 O = {o ∈ {1,3,7} | o < h}
 3. days[o].count += additional (各 o に 1 回)
@@ -387,23 +391,27 @@ simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizo
 6. Deck 版: `getUpcomingReviewLoadExtended` で対象デッキ counts を同様に補正し Day1/3/7/Peak/W1 再算出
 
 UI (Profile What-if モーダル):
+
 - `Chained (1/3/7)` チェックボックスで切替 (デフォルト: OFF)
 - 有効時 Dist: D1:10, D3:10 … の簡易タグ表示
 - Deck 指定 + Chained ON: `Deck Chain Impact` ボックス表示 (単発版 deckImpact を置換)
 - Chained OFF: 従来 Day1 のみ加算モデル (後方互換)
 
 解釈ガイド:
+
 - Peak が単発モデルより顕著 (≥+10%) → 導入の分割 / 翌日抑制検討
 - Week1 Total 増分 (Day1+3) が過去7日平均レビュー数を超える → 近い将来負荷上振れリスク
-- day3After ≈ day1After * 0.6–0.8: 連続集中的再出現 → 休憩スケジューリング余地確認
+- day3After ≈ day1After \* 0.6–0.8: 連続集中的再出現 → 休憩スケジューリング余地確認
 
 既知制約 / 簡略化:
+
 - 失敗 (Again) 再注入確率 0 扱い (実負荷より低め)
 - 個別 difficulty/stability 非利用 → 一律 1/3/7
 - Day7 を horizon=7 でカバーしない (14d 対応後に表示)
 - Week1 Total は Day1/3 のみ追加 (Day7 は Week2)
 
 将来拡張 (案):
+
 1. 14d チェーン対応 (Day7 影響 / Week2 指標連動)
 2. AgainRate 推定による期待値 E[reviews] = Σ( deterministics + failures ) 近似
 3. FSRS baseline (stability) から初期間隔サンプリング (log / exp 分布)
@@ -411,21 +419,74 @@ UI (Profile What-if モーダル):
 5. シナリオ比較パネル (Single vs Chained vs Probabilistic)
 
 テスト観点:
+
 - additional=0 → chainDistribution=[] / deltas=0
 - horizon=7 で day7 不在 / horizon>=8 で出現
 - deckChainImpact.day7Before==day7After (horizon<8)
-- チェーン ON/OFF 切替で original.* が変化しない (派生のみ更新)
+- チェーン ON/OFF 切替で original.\* が変化しない (派生のみ更新)
 
 リスク / 注意:
+
 - 固定分布のため極端に易/難カードで過大/過小評価
 - 7d モードは第2週頭 (Day7) の負荷を未表示 → 14d 切替周知必要
 - 大量追加 (≥300) でも O(days) 処理だが将来確率分岐拡張時コスト増懸念
 
 撤退条件:
+
 - 利用率低 / 誤解多数 → Advanced オプション化
 - 実測 vs 予測 Day3/7 差異が継続高 (>30%) → 分布学習型へ移行
 
 関連コード: `reviews.ts#simulateNewCardsImpactChained*`, Profile What-if モーダル toggle。
+
+### 14d Chained Enhancement (Phase 1.28)
+
+目的: 14d Horizon 時に Day7 連鎖レビュー (第2週冒頭) をチェーンモデルへ組み込み、Week2 立ち上がりピークの過小評価を是正。Week1 と Week2 への初期導入負荷分布 (W1+/W2+) を即時把握できるようにする。
+
+変更点:
+
+- `WhatIfResult` に `chainWeek1Added` (DayOffset<=6), `chainWeek2Added` (7<=DayOffset<=13) を追加。
+- horizon>=8 の場合 chainDistribution に dayOffset:7 を自然に含む (既存フィルタ `<horizonDays` により条件を満たすため追加計算不要)。
+- horizon>=14 & Chained ON 時 UI で Chain Summary (W1+/W2+) を表示。
+- Deck Chain Impact: Week1 Total は Day1+3 のみ (Day7 は Week2 側へ分類)。
+
+仕様要約:
+| 条件 | Day7 加算 | W1+ 表示 | W2+ 表示 |
+|------|-----------|----------|----------|
+| h=7 | なし | なし | なし |
+| 8<=h<14 | あり (内部) | 非表示 (簡素化) | なし |
+| h>=14 | あり | 表示 | 表示 |
+
+解釈ガイド:
+
+- W1+ が過去7日平均レビュー数を超える → 短期過負荷リスク。
+- W2+ が W1 Peak の ≥70% → 第2週冒頭二峰化ピーク注意。
+
+制約 / 簡略化:
+
+- 早期 Week2 (Day8/9) の追加レビューは未モデル化 (固定 1/3/7 のみ)。
+- Again (失敗) 再注入確率は 0 扱い。
+- Horizon 8–13 の中間レンジでは W2+ 不完全のため UI サマリ非表示。
+
+将来拡張:
+
+1. 可変プリセット (Short:1/2/5, Standard:1/3/7, Gentle:2/5/9)
+2. AgainRate 学習による期待再注入 (確率分岐) モード
+3. FSRS stability 由来初期間隔サンプリング (個別 difficulty/stability)
+4. Multi-deck weighted introduce シミュレーション (最適化)
+5. Single vs Chained vs Probabilistic 比較 UI
+
+テスト観点追加:
+
+- horizon=14, additional>0, chained ON → chainWeek1Added = additional*2, chainWeek2Added = additional*1。
+- horizon=14, chained OFF → 両フィールド undefined。
+- horizon=7 → chainWeek2Added undefined。
+- horizon=10 → chainDistribution に day7 あり / サマリ非表示。
+
+関連コード: `reviews.ts#simulateNewCardsImpactChained`, `profile/page.tsx` Chain Summary UI。
+
+既知リスク:
+
+- W1+/W2+ 指標が大量導入時に心理的抑制過多 → 将来は時間見積もり (分/日) 併記でバランス予定。
 
 ```ts
 export type ReviewLog = {

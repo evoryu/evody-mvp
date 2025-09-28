@@ -864,6 +864,9 @@ export interface WhatIfResult {
     deckPeakBefore: number; deckPeakAfter: number
     deckWeek1TotalBefore?: number; deckWeek1TotalAfter?: number
   }
+  // Phase 1.28 (optional aggregate for chained mode, horizon dependent)
+  chainWeek1Added?: number // sum of added counts whose dayOffset <=6
+  chainWeek2Added?: number // sum of added counts whose 7<=dayOffset<=13 (when horizon>=14)
 }
 
 // Simulate introducing `additional` new cards today (they first reappear tomorrow) and compute impact on 7-day (or horizon) load.
@@ -987,12 +990,16 @@ export function simulateNewCardsImpactChained(additional: number, horizonDays = 
   const deltaPeak = (simulated.peak?.count || 0) - (original.peak?.count || 0)
   const deltaMedian = simulated.median - original.median
   const peakIncreasePct = (original.peak && original.peak.count > 0) ? (deltaPeak / original.peak.count) : 0
+  const chainWeek1Added = distribution.filter(d=> d.dayOffset<=6).reduce((a,b)=>a+b.added,0) || undefined
+  const chainWeek2Added = distribution.filter(d=> d.dayOffset>=7 && d.dayOffset<=13).reduce((a,b)=>a+b.added,0) || undefined
   return {
     additional,
     original,
     simulated,
     deltas: { peak: deltaPeak, median: parseFloat(deltaMedian.toFixed(2)), peakIncreasePct: parseFloat((peakIncreasePct*100).toFixed(2)), classificationChanged: original.classification !== simulated.classification },
-    chainDistribution: distribution
+    chainDistribution: distribution,
+    ...(chainWeek1Added? { chainWeek1Added }: {}),
+    ...(chainWeek2Added? { chainWeek2Added }: {})
   }
 }
 
@@ -1020,6 +1027,7 @@ export function simulateNewCardsImpactChainedWithDeck(additional: number, deckId
       if (target.counts.length > 3) addW1 += additional
       w1After = w1Before + addW1
     }
+    // Pass through aggregate fields from base (chainWeek1Added/chainWeek2Added already computed there)
     return { ...base, deckChainImpact: { deckId, day1Before, day1After, day3Before, day3After, day7Before, day7After, deckPeakBefore, deckPeakAfter, deckWeek1TotalBefore: w1Before, deckWeek1TotalAfter: w1After } }
   } catch { return base }
 }
