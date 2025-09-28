@@ -488,6 +488,63 @@ UI (Profile What-if モーダル):
 
 - W1+/W2+ 指標が大量導入時に心理的抑制過多 → 将来は時間見積もり (分/日) 併記でバランス予定。
 
+### Chain Presets (Phase 1.29A)
+
+目的: 固定 1/3/7 モデルを複数プリセット化し、初期再出現間隔を学習状況 (集中度/空き時間/許容負荷) に合わせ柔軟に選択。導入→14d のピーク / Week1 / Week2 分布トレードオフ比較を高速化。
+
+プリセット:
+
+- Standard: 1/3/7 (従来デフォルト)
+- Fast: 1/2/5 (初期密度を前倒し→後半緩和)
+- Gentle: 2/5/9 (初期負荷軽減 / Week2 初頭集中リスク)
+- Minimal: 3/7 (2 ステップ / 忙しい日用 / 忘却リスク高)
+
+ロジック:
+
+```
+simulateNewCardsImpactChained(additional, horizon, now, offsets?)
+```
+
+- offsets 省略時 Standard
+- sanitizeOffsets: 正数 / 重複除去 / 上限(365) / 昇順 / fallback
+- chainDistribution = offsets かつ dayOffset < horizon
+- chainWeek1Added = Σ(o∈offsets | o<=6 且つ o<horizon) \* additional
+- chainWeek2Added = Σ(o∈offsets | 7<=o<=13 且つ o<horizon) \* additional
+
+UI:
+
+- Chained ON: プリセット select + D{offset} チップ (horizon 超過は line-through + 淡色)
+- ラベル: Chained (1/2/5) など動的
+- Chain Summary: (W1+/W2+) と使用オフセット列挙
+
+解釈指針:
+
+- Fast: W1+ 増 → 集中トレーニング / 余裕ある時間帯向け
+- Gentle: W1+ 抑制 ↔ W2+ 増加 → 来週の負荷許容量が高い場合
+- Minimal: Retention が低下する期間は避ける (間隔空きすぎ)
+
+非目標 (本フェーズ):
+
+- 任意カスタム入力 / 永続プリセット管理
+- 確率分布 / AgainRate 期待値連動
+- Deck 個別別プリセット選択
+
+テスト観点:
+
+- horizon=7 + Gentle → D9 無効 (line-through) / chainWeek2Added undefined
+- horizon=14 + Minimal → chainWeek1Added=0, chainWeek2Added=additional (D7 のみ)
+- additional=0 → chainDistribution=[] / aggregates undefined
+- プリセット切替: original 不変 / simulated が期待どおり (Peak/Median 差異)
+
+将来拡張:
+
+1. カスタムプリセット保存 (localStorage) / Import/Export
+2. AgainRate / Retention 予測に基づく確率チェーン (期待値負荷)
+3. 時間換算 (平均秒 \* 枚数 → 分/日)
+4. “最適プリセット提案” (制約: W1 Peak <= X かつ W2 Peak <= Y など)
+
+関連コード: `reviews.ts (CHAIN_PRESETS / simulateNewCardsImpactChained*)`, `profile/page.tsx` What-if モーダル (プリセット select / チップ / Chain Summary)。
+
 ```ts
 export type ReviewLog = {
   id: string

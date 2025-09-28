@@ -956,13 +956,28 @@ export function simulateNewCardsImpactWithDeck(additional: number, deckId: strin
 //  - Horizon shorter than a dayOffset simply ignores that bucket
 //  - Deck variant: assumes all additional belong to specified deckId
 //  - Does not alter backlog; counts add exactly once per offset (no lapses)
-export function simulateNewCardsImpactChained(additional: number, horizonDays = 7, now = Date.now()): WhatIfResult {
+export type ChainPresetKey = 'standard' | 'fast' | 'gentle' | 'minimal'
+export const CHAIN_PRESETS: Record<ChainPresetKey, number[]> = {
+  standard: [1,3,7],
+  fast: [1,2,5],
+  gentle: [2,5,9],
+  minimal: [3,7],
+}
+
+function sanitizeOffsets(offsets?: number[]): number[] {
+  const fallback = CHAIN_PRESETS.standard
+  if (!offsets || !Array.isArray(offsets) || offsets.length === 0) return fallback
+  return [...new Set(offsets.filter(o=> Number.isFinite(o) && o>0 && o<365).map(o=> Math.floor(o)))].sort((a,b)=>a-b) || fallback
+}
+
+// Added offsets param (Phase 1.29A): allows flexible early interval sets (default standard [1,3,7])
+export function simulateNewCardsImpactChained(additional: number, horizonDays = 7, now = Date.now(), offsets?: number[]): WhatIfResult {
   if (additional < 0) additional = 0
   const original = getUpcomingReviewLoad(horizonDays, now)
   if (additional === 0) {
     return { additional, original, simulated: original, deltas: { peak:0, median:0, peakIncreasePct:0, classificationChanged:false }, chainDistribution: [] }
   }
-  const chain = [1,3,7]
+  const chain = sanitizeOffsets(offsets)
   const distribution = chain.filter(d=> d < horizonDays).map(dayOffset => ({ dayOffset, added: additional }))
   // Clone days & apply additions
   const simulatedDays: UpcomingLoadDay[] = original.days.map((d,i)=>{
@@ -1003,28 +1018,30 @@ export function simulateNewCardsImpactChained(additional: number, horizonDays = 
   }
 }
 
-export function simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizonDays=7, now=Date.now()): WhatIfResult {
-  const base = simulateNewCardsImpactChained(additional, horizonDays, now)
+export function simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizonDays=7, now=Date.now(), offsets?: number[]): WhatIfResult {
+  const chain = sanitizeOffsets(offsets)
+  const base = simulateNewCardsImpactChained(additional, horizonDays, now, chain)
   try {
     const ext = getUpcomingReviewLoadExtended(horizonDays, now)
     const target = ext.decks?.find(d=> d.deckId === deckId)
     if (!target) return base
-    const offsets = [1,3,7]
     const safe = (i:number)=> target.counts[i] || 0
-    const day1Before = safe(1); const day3Before = safe(3); const day7Before = safe(7)
-    const day1After = day1Before + (offsets.includes(1)? additional:0)
-    const day3After = day3Before + (offsets.includes(3)? additional:0)
-    const day7After = day7Before + (offsets.includes(7)? additional:0)
-    const deckCountsAfter = target.counts.map((c,i)=> offsets.includes(i)? c + additional : c)
+    // Derive before/after for each early offset present in chain; keep legacy keys for 1/3/7 if they exist for backward compatibility in UI (undefined if absent)
+    const day1Before = chain.includes(1)? safe(1): safe(1)
+    const day3Before = chain.includes(3)? safe(3): safe(3)
+    const day7Before = chain.includes(7)? safe(7): safe(7)
+    const day1After = chain.includes(1)? day1Before + additional : day1Before
+    const day3After = chain.includes(3)? day3Before + additional : day3Before
+    const day7After = chain.includes(7)? day7Before + additional : day7Before
+    const deckCountsAfter = target.counts.map((c,i)=> chain.includes(i)? c + additional : c)
     const deckPeakBefore = Math.max(...target.counts)
     const deckPeakAfter = Math.max(...deckCountsAfter)
     const w1Before = target.w1?.total
     let w1After: number | undefined = w1Before
     if (typeof w1Before === 'number') {
-      // day1 (1) and day3 (3) within week1 window; day7 outside
+      // Week1 window offsets contribute if <=6
       let addW1 = 0
-      if (target.counts.length > 1) addW1 += additional
-      if (target.counts.length > 3) addW1 += additional
+      for (const o of chain) if (o<=6 && target.counts.length > o) addW1 += additional
       w1After = w1Before + addW1
     }
     // Pass through aggregate fields from base (chainWeek1Added/chainWeek2Added already computed there)

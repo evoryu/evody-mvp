@@ -5,7 +5,7 @@ import { usePoints } from '../points-context'
 import Avatar from '@/components/avatar'
 import { getStatsForToday, TodayStats, getStreak, StreakInfo, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyReactionTimes, getDailyDeckReactionTimes } from '@/lib/episodes'
 import { DECKS } from '@/lib/decks'
-import { getReviewStats, ReviewStats, getReviewPerformance, ReviewPerformance, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck } from '@/lib/reviews'
+import { getReviewStats, ReviewStats, getReviewPerformance, ReviewPerformance, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck, CHAIN_PRESETS, ChainPresetKey } from '@/lib/reviews'
 import ActivityHeatmap from '@/components/activity-heatmap'
 
 
@@ -74,6 +74,18 @@ export default function ProfilePage() {
   const [whatIfN, setWhatIfN] = React.useState(0)
   const [whatIfResult, setWhatIfResult] = React.useState<WhatIfResult | null>(null)
   const [whatIfChained, setWhatIfChained] = React.useState(false) // Phase 1.27 toggle
+  const [chainPreset, setChainPreset] = React.useState<ChainPresetKey>('standard') // Phase 1.29A presets
+
+  // Persist chain preset selection
+  React.useEffect(()=>{
+    try {
+      const saved = localStorage.getItem('evody:whatif:chainPreset') as ChainPresetKey | null
+      if (saved && ['standard','fast','gentle','minimal'].includes(saved)) setChainPreset(saved)
+    } catch {/* ignore */}
+  }, [])
+  React.useEffect(()=>{
+    try { localStorage.setItem('evody:whatif:chainPreset', chainPreset) } catch {/* ignore */}
+  }, [chainPreset])
   const [applying, setApplying] = React.useState(false)
   // Quality Trend card local data (moved out of What-if modal). If reintroduced, re-enable below.
   // const [perfRows, setPerfRows] = React.useState<ReturnType<typeof getRecentDailyPerformance>>([])
@@ -84,13 +96,14 @@ export default function ProfilePage() {
     if (!showWhatIf) return
     try {
       if (whatIfChained) {
-        setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactChainedWithDeck(whatIfN, whatIfDeck, horizon): simulateNewCardsImpactChained(whatIfN, horizon))
+        const offsets = CHAIN_PRESETS[chainPreset]
+        setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactChainedWithDeck(whatIfN, whatIfDeck, horizon, Date.now(), offsets): simulateNewCardsImpactChained(whatIfN, horizon, Date.now(), offsets))
       } else {
         setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactWithDeck(whatIfN, whatIfDeck, horizon): simulateNewCardsImpact(whatIfN, horizon))
       }
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [whatIfChained])
+  }, [whatIfChained, chainPreset])
 
   // Deck選択 永続化ロード
   React.useEffect(()=>{
@@ -220,13 +233,18 @@ export default function ProfilePage() {
   React.useEffect(()=>{
     if (!showWhatIf) return
     try {
-      if (whatIfDeck !== 'ALL') {
-        try { setWhatIfResult(simulateNewCardsImpactWithDeck(whatIfN, whatIfDeck, horizon)) } catch { setWhatIfResult(simulateNewCardsImpact(whatIfN, horizon)) }
+      if (whatIfChained) {
+        const offsets = CHAIN_PRESETS[chainPreset]
+        setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactChainedWithDeck(whatIfN, whatIfDeck, horizon, Date.now(), offsets): simulateNewCardsImpactChained(whatIfN, horizon, Date.now(), offsets))
       } else {
-        setWhatIfResult(simulateNewCardsImpact(whatIfN, horizon))
+        if (whatIfDeck !== 'ALL') {
+          try { setWhatIfResult(simulateNewCardsImpactWithDeck(whatIfN, whatIfDeck, horizon)) } catch { setWhatIfResult(simulateNewCardsImpact(whatIfN, horizon)) }
+        } else {
+          setWhatIfResult(simulateNewCardsImpact(whatIfN, horizon))
+        }
       }
     } catch {/* ignore */}
-  }, [showWhatIf, whatIfN, horizon, whatIfDeck])
+  }, [showWhatIf, whatIfN, horizon, whatIfDeck, whatIfChained, chainPreset])
 
   // Deck変更時のみ個別再計算
   React.useEffect(()=> {
@@ -1051,12 +1069,35 @@ export default function ProfilePage() {
                         </select>
                       </label>
                       <div className="text-[10px] text-[var(--c-text-muted)] leading-snug">
-                        {whatIfChained ? '仮定: Day1/3/7 の3点で初期再出現 (固定間隔近似)。失敗/ズレ未考慮。W1合計は Day1+3 を加算 (Day7 は W2 対象)。' : '仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。'}
+                        {whatIfChained ? '仮定: プリセット初期間隔で初期再出現 (固定間隔近似)。失敗/ズレ未考慮。W1合計は Week1 内オフセット (<=6)。' : '仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。'}
                       </div>
                       <div className="flex items-center gap-2 pt-1">
                         <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
                           <input type="checkbox" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
-                          <span>Chained (1/3/7)</span>
+                          <span>Chained ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
+                          {whatIfChained && (
+                            <div className="ml-2 flex items-center gap-1 flex-wrap">
+                              <select
+                                value={chainPreset}
+                                onChange={e=> setChainPreset(e.target.value as ChainPresetKey)}
+                                className="rounded-md border bg-transparent px-1 py-0.5 text-[10px]"
+                                title="初期再出現プリセット"
+                              >
+                                <option value="standard">Std 1/3/7</option>
+                                <option value="fast">Fast 1/2/5</option>
+                                <option value="gentle">Gentle 2/5/9</option>
+                                <option value="minimal">Mini 3/7</option>
+                              </select>
+                              <div className="flex items-center gap-1 text-[9px] ml-1">
+                                {CHAIN_PRESETS[chainPreset].map(o=>{
+                                  const disabled = o >= horizon
+                                  return (
+                                    <span key={o} className={`px-1 py-0.5 rounded border ${disabled? 'opacity-40 line-through' : 'opacity-90'} bg-[var(--c-surface-alt)]`}>{`D${o}`}</span>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </label>
                         {whatIfResult.chainDistribution && (
                           <div className="text-[9px] text-[var(--c-text-muted)]">
@@ -1083,12 +1124,14 @@ export default function ProfilePage() {
                           <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
                           {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
                             <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5">Chain Summary</div>
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2">Chain Summary
+                                <span className="text-[8px] font-normal text-[var(--c-text-muted)]">({CHAIN_PRESETS[chainPreset].join('/')})</span>
+                              </div>
                               <div className="flex flex-wrap gap-x-4 gap-y-1">
                                 {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
-                                {whatIfResult.chainWeek2Added && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
+                                {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
                               </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+ = Day1+3 追加合計 / W2+ = Day7 (14d horizon 時)。</div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
                             </div>
                           )}
                         </div>
@@ -1160,7 +1203,7 @@ export default function ProfilePage() {
                         {whatIfResult.deckChainImpact.deckWeek1TotalBefore!=null && (
                           <div>W1 Total: {whatIfResult.deckChainImpact.deckWeek1TotalBefore} → {whatIfResult.deckChainImpact.deckWeek1TotalAfter}</div>
                         )}
-                        <div className="text-[8px] text-[var(--c-text-muted)]">簡易チェーンモデル (固定 1/3/7)。将来: 個別安定性ベース動的化。</div>
+                        <div className="text-[8px] text-[var(--c-text-muted)]">簡易チェーンモデル (Preset: {CHAIN_PRESETS[chainPreset].join('/')}). 将来: 個別安定性ベース動的化予定。</div>
                       </div>
                     )}
                     {!whatIfResult.deckChainImpact && whatIfResult.deckImpact && !whatIfChained && (
