@@ -93,6 +93,9 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
   )
 }
 
+interface AdaptiveDetailLite { final?: number }
+interface UpcomingLoadExtLite { decks?: { deckId: string }[] }
+
 export interface WhatIfDialogProps {
   open: boolean
   onClose: () => void
@@ -102,8 +105,8 @@ export interface WhatIfDialogProps {
   setWhatIfN: (n: number) => void
   whatIfDeck: string
   setWhatIfDeck: (id: string) => void
-  adaptiveDetail: unknown
-  upcomingLoadExt: unknown
+  adaptiveDetail: AdaptiveDetailLite | null
+  upcomingLoadExt: UpcomingLoadExtLite | null
   whatIfChained: boolean
   setWhatIfChained: (b: boolean) => void
   chainPreset: ChainPresetKey
@@ -129,8 +132,8 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
 
   if (!open) return null
 
-  const adaptive = adaptiveDetail as { final?: number } | undefined
-  const ext = upcomingLoadExt as { decks?: { deckId: string }[] } | undefined
+  const adaptive = adaptiveDetail || undefined
+  const ext = upcomingLoadExt || undefined
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label="What-if シミュレーションモーダル">

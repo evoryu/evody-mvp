@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { KpiBadge, decideDeltaTone } from '@/components/kpi-badge'
-import { CollapsibleSection } from '@/components/collapsible-section'
+// Removed inline What-if UI pieces; dialog encapsulates KPI badges & sections.
+import { WhatIfDialog } from '@/components/whatif-dialog'
 import { usePoints } from '../points-context'
 import Avatar from '@/components/avatar'
-import { getStatsForToday, TodayStats, getStreak, StreakInfo, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyReactionTimes, getDailyDeckReactionTimes } from '@/lib/episodes'
+import { getStatsForToday, TodayStats, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyDeckReactionTimes } from '@/lib/episodes'
 import { DECKS } from '@/lib/decks'
-import { getReviewStats, ReviewStats, getReviewPerformance, ReviewPerformance, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck, CHAIN_PRESETS, ChainPresetKey } from '@/lib/reviews'
+import { getReviewStats, ReviewStats, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck, CHAIN_PRESETS, ChainPresetKey } from '@/lib/reviews'
 import ActivityHeatmap from '@/components/activity-heatmap'
 
 
@@ -42,29 +42,26 @@ export default function ProfilePage() {
   const level = Math.floor(points / 100) + 1 // 仮のレベル計算
   const [todayStats, setTodayStats] = React.useState<TodayStats | null>(null)
   const [autoPost, setAutoPost] = React.useState(false)
-  const [streak, setStreak] = React.useState<StreakInfo>({ current: 0, longest: 0, lastActive: null })
+  // Removed unused: streak stats no longer displayed on Profile card after refactor.
   const [reviewStats, setReviewStats] = React.useState<ReviewStats>({ today: 0, due: 0, newCards: 0 })
-  const [reviewPerf, setReviewPerf] = React.useState<ReviewPerformance | null>(null)
+  // Removed unused: review performance aggregate not shown in current UI.
   const [newAvail, setNewAvail] = React.useState(()=> getNewCardAvailability())
   const [adaptiveDetail, setAdaptiveDetail] = React.useState<ReturnType<typeof getAdaptiveNewLimit> | null>(null)
-  const [adaptiveOverride, setAdaptiveOverride] = React.useState<string | null>(null) // 'fixed' | null
+  // Removed unused: adaptive override toggle not surfaced in UI.
 
-  // Load override state once
-  React.useEffect(()=>{
-    try { setAdaptiveOverride(localStorage.getItem('evody:adaptiveNew:override')) } catch {}
-  }, [])
-  const [recentRetention, setRecentRetention] = React.useState<number[]>([]) // 直近 review retention (最大5件)
+  // (Adaptive override loading removed)
+  // Removed unused: recent retention sparkline not shown post-cleanup.
   const [showReviewModal, setShowReviewModal] = React.useState(false)
   const [recentReviewEpisodes, setRecentReviewEpisodes] = React.useState<Episode[]>([])
   const [retention7d, setRetention7d] = React.useState<DailyRetention[]>([])
   const [selectedDeck, setSelectedDeck] = React.useState<string>('') // '' = 全体
-  const [deckRetention7d, setDeckRetention7d] = React.useState<DailyRetention[]>([])
+  // Removed unused: per-deck retention 7d view trimmed.
   const [retentionMode, setRetentionMode] = React.useState<RetentionWeightMode>('effective')
   const [focusAlert, setFocusAlert] = React.useState<string | null>(null)
-  const [reaction7d, setReaction7d] = React.useState<{ date: string; p50: number | null; p90: number | null }[]>([])
+  // Removed unused: global reaction7d trimmed (deck-specific retained).
   const [deckReaction7d, setDeckReaction7d] = React.useState<{ date: string; p50: number | null; p90: number | null }[]>([])
   const [deckTailIndex7d, setDeckTailIndex7d] = React.useState<{ date: string; ti: number | null }[]>([])
-  const [tailIndex7d, setTailIndex7d] = React.useState<{ date: string; ti: number | null }[]>([])
+  // Removed unused: global tail index trimmed (deck-specific retained).
   const [upcomingLoad, setUpcomingLoad] = React.useState<UpcomingLoadSummary | null>(null)
   // Extended Horizon (Phase 1.24)
   const [horizon, setHorizon] = React.useState<number>(7)
@@ -127,9 +124,7 @@ export default function ProfilePage() {
     // クライアントでのみ計算
     const refresh = () => {
       setTodayStats(getStatsForToday())
-      setStreak(getStreak())
-      setReviewStats(getReviewStats())
-      setReviewPerf(getReviewPerformance())
+  setReviewStats(getReviewStats())
   setNewAvail(getNewCardAvailability())
   try { setAdaptiveDetail(getAdaptiveNewLimit()) } catch { /* ignore */ }
     try {
@@ -147,62 +142,29 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   // Removed Quality Trend inline fetch (perfRows) after modal refactor.
       try {
-        const rr = listEpisodes()
-          .filter(e => e.kind === 'review' && typeof e.retention === 'number')
-          .slice(0, 5) // listEpisodes は finishedAt 降順
-          .map(e => e.retention as number)
-          .reverse()   // 古い -> 新しい 順に並べて視覚的に左→右時間経過
-        setRecentRetention(rr)
+        // Removed recentRetention collection (not displayed)
         const eps = listEpisodes().filter(e => e.kind === 'review').slice(0, 20)
         setRecentReviewEpisodes(eps)
   setRetention7d(getDailyReviewRetention(7, undefined, undefined, retentionMode))
-  const react7 = getDailyReactionTimes(7)
-  setReaction7d(react7)
-  // Tail Index (p90/p50) 日次。p50<=0 や null は無効。p90 null の場合 ti も null。
-  let tiLocal: { date:string; ti: number | null }[] = []
-  try {
-    tiLocal = react7.map(r=>{
-      if (r.p50==null || r.p50<=0 || r.p90==null) return { date: r.date, ti: null }
-      return { date: r.date, ti: parseFloat((r.p90 / r.p50).toFixed(2)) }
-    })
-    setTailIndex7d(tiLocal)
-  } catch { /* ignore */ }
+  // Removed global reaction / tail index metrics
         // Baseline Adaptive Focus / Variability Alert 判定
         try {
-          const reactAll = getDailyReactionTimes(7) // 過去7日 (今日含む)
           const retentionAll = getDailyReviewRetention(7)
-          const todayKey = reactAll.length ? reactAll[reactAll.length-1].date : null
+          const todayKey = retentionAll.length ? retentionAll[retentionAll.length-1].date : null
           if (todayKey) {
             const suppressedKey = 'evody:focusAlert:' + todayKey
             if (!localStorage.getItem(suppressedKey)) {
               // Baseline: 過去6日 (当日除く) の有効値平均 (>=3日で確定)
-              const pastReact = reactAll.slice(0, -1)
               const pastRet = retentionAll.slice(0, -1)
-              const todayReact = reactAll[reactAll.length-1]
               const todayRet = retentionAll[retentionAll.length-1]
-              const p50PastVals = pastReact.map(r=>r.p50).filter((v): v is number => typeof v==='number' && v>0)
-              const tiPastVals = tiLocal.slice(0, -1).map(t=>t.ti).filter((v): v is number => typeof v==='number' && v>0)
               const retPastVals = pastRet.map(r=>r.retention).filter((v): v is number => typeof v==='number' && v>0)
               const mean = (arr:number[]) => arr.reduce((a,b)=>a+b,0)/arr.length
-              const baselineP50: number | null = p50PastVals.length>=3? mean(p50PastVals) : null
               const baselineRet: number | null = retPastVals.length>=3? mean(retPastVals) : null
-              const baselineTI: number | null = tiPastVals.length>=3? mean(tiPastVals) : null
-              const p50Now = todayReact?.p50 ?? null
               const retNow = todayRet?.retention ?? null
-              const tiNow = tiLocal.length? tiLocal[tiLocal.length-1].ti : null
               const messages: string[] = []
-              if (baselineP50!=null && baselineRet!=null && p50Now!=null && retNow!=null) {
-                const condSpeed = p50Now >= baselineP50 * 1.25 // 25% 悪化
-                const condRetention = retNow <= baselineRet - 0.04 // 4pt 低下
-                if (condSpeed && condRetention) {
-                  messages.push(`集中度低下: p50 ${Math.round(p50Now)}ms (基準${Math.round(baselineP50)}ms) / Retention ${(retNow*100).toFixed(0)}% (基準 ${(baselineRet*100).toFixed(0)}%)`)
-                }
-              }
-              if (baselineTI!=null && tiNow!=null) {
-                const condTI = tiNow >= Math.max(1.6, baselineTI * 1.05)
-                if (condTI) {
-                  messages.push(`ばらつき増大: TI ${tiNow.toFixed(2)} (基準 ${(baselineTI).toFixed(2)})`) 
-                }
+              // Simplified: only retention-based alert retained post cleanup
+              if (baselineRet!=null && retNow!=null && retNow <= baselineRet - 0.04) {
+                messages.push(`Retention低下: ${(retNow*100).toFixed(0)}% (基準 ${(baselineRet*100).toFixed(0)}%)`)
               }
               if (messages.length) {
                 setFocusAlert(messages.join(' / ')+ '。短い休憩や新カード導入抑制を検討。')
@@ -253,13 +215,7 @@ export default function ProfilePage() {
   }, [showWhatIf, whatIfN, horizon, whatIfDeck, whatIfChained, chainPreset])
 
   // Deck変更時のみ個別再計算
-  React.useEffect(()=> {
-    if (selectedDeck) {
-      setDeckRetention7d(getDailyReviewRetention(7, undefined, selectedDeck, retentionMode))
-    } else {
-      setDeckRetention7d([])
-    }
-  }, [selectedDeck, retentionMode])
+  // Removed per-deck retention effect (not displayed)
 
   // Deck Reaction 7d (ログ変更イベントで自動更新)
   React.useEffect(()=>{
@@ -383,253 +339,71 @@ export default function ProfilePage() {
             </div>
             <div className="text-center">
               <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">今日のポイント</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats?.points ?? 0}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード数</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats?.cards ?? 0}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">連続日数</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{streak.current}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">最長連続</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums">{streak.longest}</div>
-            </div>
-            <div className="col-span-2 h-px bg-[var(--c-border)]/60" />
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">今日レビュー</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">{reviewStats.today}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">待ち( due )</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">{reviewStats.due}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">新カード</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">{reviewStats.newCards}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">Retention</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">{reviewPerf ? Math.round(reviewPerf.retention*100) : 0}%</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">Again率</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">{reviewPerf ? Math.round(reviewPerf.againRate*100) : 0}%</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)] flex items-center justify-center gap-1">新カード枠
-                {adaptiveDetail && (
-                  <span
-                    className="inline-block cursor-help text-[9px] px-1 py-0.5 rounded bg-[var(--c-surface-alt)] text-[var(--c-text-secondary)]"
-                    title={(() => {
-                      const d = adaptiveDetail
-                      const reasons = d.adjustments.length ? d.adjustments.map(a => `${a.delta>0?'+':''}${a.delta} ${a.reason}`).join(', ') : 'No adjustments'
-                      return `Base ${d.base} -> Computed ${d.computed} => Final ${d.final}${d.overridden?' (override)':''}\n` + reasons
-                    })()}
-                  >i</span>
-                )}
-              </div>
-              <div
-                className="mt-1 text-xl font-semibold tabular-nums"
-                suppressHydrationWarning
-                title={adaptiveDetail ? (()=>{
-                  const d = adaptiveDetail
-                  const reasons = d.adjustments.length ? d.adjustments.map(a => `${a.delta>0?'+':''}${a.delta} ${a.reason}`).join(', ') : 'No adjustments'
-                  return `Base ${d.base} -> Computed ${d.computed} => Final ${d.final}${d.overridden?' (override)':''}\n${reasons}`
-                })() : ''}
-              >{newAvail.remainingToday}/{newAvail.dailyLimit}</div>
-              <div className="mt-2 flex items-center justify-center gap-1">
-                <input
-                  id="adaptiveOverride"
-                  type="checkbox"
-                  className="h-3 w-3 accent-blue-600"
-                  checked={adaptiveOverride === 'fixed'}
-                  onChange={e=>{
-                    const val = e.target.checked ? 'fixed' : null
+              {/* What-if Dialog (portal-like overlay) */}
+              {showWhatIf && whatIfResult && (
+                <WhatIfDialog
+                  open={showWhatIf}
+                  onClose={()=> setShowWhatIf(false)}
+                  horizon={horizon}
+                  whatIfResult={whatIfResult}
+                  whatIfN={whatIfN}
+                  setWhatIfN={setWhatIfN}
+                  whatIfDeck={whatIfDeck}
+                  setWhatIfDeck={setWhatIfDeck}
+                  adaptiveDetail={adaptiveDetail}
+                  upcomingLoadExt={upcomingLoadExt}
+                  whatIfChained={whatIfChained}
+                  setWhatIfChained={setWhatIfChained}
+                  chainPreset={chainPreset}
+                  setChainPreset={setChainPreset}
+                  collapseEarly={collapseEarly}
+                  setCollapseEarly={setCollapseEarly}
+                  collapseTime={collapseTime}
+                  setCollapseTime={setCollapseTime}
+                  collapseChain={collapseChain}
+                  setCollapseChain={setCollapseChain}
+                  applying={applying}
+                  onApply={()=>{
+                    if (whatIfN<=0) return
+                    setApplying(true)
                     try {
-                      if (val) localStorage.setItem('evody:adaptiveNew:override', val)
-                      else localStorage.removeItem('evody:adaptiveNew:override')
-                    } catch {}
-                    setAdaptiveOverride(val)
-                    // refresh details after change
-                    setAdaptiveDetail(getAdaptiveNewLimit())
-                    setNewAvail(getNewCardAvailability())
+                      const ids = Array.from({length: whatIfN}, ()=> crypto.randomUUID())
+                      if (whatIfDeck === 'ALL') introduceNewCards(ids)
+                      else introduceNewCards(ids, whatIfDeck)
+                      setShowWhatIf(false)
+                    } catch {/* ignore */}
+                    finally {
+                      setApplying(false)
+                      setTimeout(()=>{ try{ setUpcomingLoad(getUpcomingReviewLoad(7)) }catch{} }, 10)
+                    }
                   }}
                 />
-                <label htmlFor="adaptiveOverride" className="text-[9px] cursor-pointer text-[var(--c-text-secondary)]" title="ONにすると動的調整を一時停止しベース枠固定 (翌日も継続)。">固定</label>
-              </div>
-            </div>
-            {recentRetention.length > 0 && (
-              <div className="col-span-2 mt-2">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">Recent Retention</span>
-                  <span className="text-[10px] text-[var(--c-text-muted)]">{Math.round(recentRetention[recentRetention.length-1]*100)}%</span>
-                </div>
-                <div className="flex h-8 items-end gap-1">
-                  {recentRetention.map((r,i)=>{
-                    const pct = r*100
-                    const height = 8 + Math.round((pct/100)*24) // 8..32px
-                    const color = pct >= 85 ? 'var(--c-accent)' : pct >= 70 ? 'var(--c-success)' : pct >= 50 ? 'var(--c-warn)' : 'var(--c-danger, #dc2626)'
-                    return (
-                      <div key={i} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/40" style={{height: '32px'}}>
-                        <div className="absolute bottom-0 left-0 w-full transition-all" style={{height, background: color}} />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[9px] font-medium text-[var(--c-text-inverse,#fff)]" style={{mixBlendMode:'plus-lighter'}}>{Math.round(pct)}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-            {reaction7d.length > 0 && (
-              <div className="col-span-2 mt-4">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">7d Reaction Time (p50 / p90)</span>
-                  {(() => {
-                    const vals = reaction7d.map(r=>r.p50).filter((v): v is number => typeof v === 'number')
-                    if (vals.length === 0) return <span className="text-[10px] text-[var(--c-text-muted)]">--</span>
-                    const latest = vals[vals.length-1]
-                    const first = vals[0]
-                    const delta = latest - first
-                    const rel = first > 0 ? (delta / first) : 0
-                    const arrow = Math.abs(rel) < 0.10 ? '→' : (rel < 0 ? '↓' : '↑') // 反応時間は減る=改善
-                    const cls = rel < 0 ? 'text-[var(--c-success)]' : rel > 0 ? 'text-[var(--c-danger,#dc2626)]' : 'text-[var(--c-text-muted)]'
-                    return <span className={`text-[10px] font-medium ${cls}`}>{latest}ms {arrow} {Math.round(rel*100)}%</span>
-                  })()}
-                </div>
-                <div className="flex h-12 items-end gap-1">
-                  {reaction7d.map(d=>{
-                    const p50 = d.p50
-                    const p90 = d.p90
-                    // スケーリング: 最大 400ms を想定 (必要なら動的計算検討)
-                    const max = 400
-                    const hP50 = p50==null ? 6 : 6 + Math.min(1, p50/max) * 40 // 6..46
-                    const hP90 = p90==null ? 0 : Math.min(1, p90/max) * 40
-                    return (
-                      <div key={d.date} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/30" style={{height:'46px'}} title={`${d.date} : ${p50==null?'No data':p50+'ms'}${p90!=null?' / p90 '+p90+'ms':''}`}>
-                        {p50!=null && (
-                          <div className="absolute bottom-0 left-0 w-full" style={{height: hP50, background:'linear-gradient(180deg,var(--c-accent) 0%,var(--c-accent) 100%)', opacity:0.85}} />
-                        )}
-                        {p90!=null && p50!=null && p90>p50 && (
-                          <div className="absolute bottom-0 left-0 w-full" style={{height: 6 + hP90, background:'var(--c-danger,#dc2626)', opacity:0.35, mixBlendMode:'multiply'}} />
-                        )}
-                        {p50==null && (
-                          <div className="absolute inset-0 flex items-center justify-center text-[8px] text-[var(--c-text-muted)] opacity-60">--</div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-            {tailIndex7d.length > 0 && (
-              <div className="col-span-2 mt-3">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">7d Tail Index (p90/p50)</span>
-                  {(() => {
-                    const vals = tailIndex7d.map(r=>r.ti).filter((v): v is number => typeof v === 'number')
-                    if (vals.length === 0) return <span className="text-[10px] text-[var(--c-text-muted)]">--</span>
-                    const latest = vals[vals.length-1]
-                    const first = vals[0]
-                    const delta = latest - first
-                    const rel = first>0 ? delta/first : 0
-                    // Tail Index は低いほど集中度/一貫性良好 (裾が締まる)。
-                    const arrow = Math.abs(rel) < 0.05 ? '→' : (rel < 0 ? '↓' : '↑')
-                    const cls = rel < 0 ? 'text-[var(--c-success)]' : rel > 0 ? 'text-[var(--c-danger,#dc2626)]' : 'text-[var(--c-text-muted)]'
-                    return <span className={`text-[10px] font-medium ${cls}`}>{latest.toFixed(2)} {arrow} {Math.round(rel*100)}%</span>
-                  })()}
-                </div>
-                <div className="flex h-10 items-end gap-1">
-                  {(() => {
-                    // 動的最大 (上限 2.5) でスケール
-                    const numbers = tailIndex7d.map(d=>d.ti).filter((v): v is number => typeof v === 'number')
-                    const maxVal = Math.min(2.5, Math.max( ...(numbers.length?numbers:[1]) , 1)) // fallback 1
-                    return tailIndex7d.map(d=>{
-                      const ti = d.ti
-                      const norm = ti==null ? 0 : Math.min(1, ti / maxVal)
-                      const height = 6 + norm * 30 // 6..36
-                      // カラー: 1.0~1.3 緑, 1.3~1.6 黄, >1.6 赤
-                      let color = 'var(--c-border)'
-                      if (ti!=null) {
-                        if (ti <= 1.3) color = 'var(--c-success)'
-                        else if (ti <= 1.6) color = 'var(--c-warn,#d97706)'
-                        else color = 'var(--c-danger,#dc2626)'
-                      }
+              )}
+              {/* 7d Retention mini bars */}
+              {retention7d.length>0 && (
+                <div className="mt-2">
+                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2">
+                    <span>7d Retention</span>
+                    <span className="text-[8px] text-[var(--c-text-muted)]">(p=cards)</span>
+                  </div>
+                  <div className="flex h-9 items-end gap-1">
+                    {retention7d.map(d=>{
+                      const pct = d.retention==null? null : Math.round(d.retention*100)
+                      const height = pct==null? 6 : 6 + Math.round((pct/100)*28)
+                      const color = pct==null? 'var(--c-border)' : (pct >= 85 ? 'var(--c-accent)' : pct >= 70 ? 'var(--c-success)' : pct >= 55 ? 'var(--c-warn,#d97706)' : 'var(--c-danger,#dc2626)')
                       return (
-                        <div key={d.date} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/30" style={{height: '36px'}} title={`${d.date} : ${ti==null?'No data':'TI '+ti.toFixed(2)}`}>
-                          {ti==null ? (
+                        <div key={d.date} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/30" style={{height:'36px'}} title={`${d.date}: ${pct==null? 'No data' : pct+'%'}`}>
+                          {pct==null ? (
                             <div className="absolute inset-0 flex items-center justify-center text-[8px] text-[var(--c-text-muted)] opacity-50">--</div>
-                          ) : (
-                            <div className="absolute bottom-0 left-0 w-full transition-all" style={{height, background: color, opacity: ti==null?0.35:1}} />
+                          ):(
+                            <div className="absolute bottom-0 left-0 w-full transition-all" style={{height, background: color, opacity: pct==null?0.35:1}} />
                           )}
                         </div>
                       )
-                    })
-                  })()}
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-            {retention7d.length > 0 && (
-              <div className="col-span-2 mt-4">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">7d Retention Trend</span>
-                  {(() => {
-                    const vals = retention7d.map(r=>r.retention).filter((v): v is number => typeof v === 'number')
-                    if (vals.length === 0) return <span className="text-[10px] text-[var(--c-text-muted)]">--</span>
-                    const latest = vals[vals.length-1]
-                    const first = vals[0]
-                    const delta = latest - first
-                    const arrow = Math.abs(delta) < 0.02 ? '→' : (delta > 0 ? '↑' : '↓')
-                    const cls = delta > 0 ? 'text-[var(--c-success)]' : delta < 0 ? 'text-[var(--c-danger,#dc2626)]' : 'text-[var(--c-text-muted)]'
-                    return <span className={`text-[10px] font-medium ${cls}`}>{Math.round(latest*100)}% {arrow} {Math.round(delta*100)}%</span>
-                  })()}
-                </div>
-                <div className="flex h-10 items-end gap-1">
-                  {retention7d.map(d=>{
-                    const pct = d.retention == null ? null : Math.round(d.retention*100)
-                    const height = pct==null ? 8 : 8 + Math.round((pct/100)*28) // 8..36px
-                    const color = pct==null ? 'var(--c-border)' : (pct >= 85 ? 'var(--c-accent)' : pct >= 70 ? 'var(--c-success)' : pct >= 55 ? 'var(--c-warn)' : 'var(--c-danger,#dc2626)')
-                    return (
-                      <div key={d.date} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/30" style={{height: '36px'}} title={`${d.date} : ${pct==null ? 'No data' : pct + '%'}`}>
-                        <div className="absolute bottom-0 left-0 w-full transition-all" style={{height, background: color, opacity: pct==null ? 0.35 : 1}} />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-            {selectedDeck && deckRetention7d.length > 0 && (
-              <div className="col-span-2 mt-3">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--c-text-secondary)]">7d Retention ({selectedDeck})</span>
-                  {(() => {
-                    const vals = deckRetention7d.map(r=>r.retention).filter((v): v is number => typeof v === 'number')
-                    if (vals.length === 0) return <span className="text-[10px] text-[var(--c-text-muted)]">--</span>
-                    const latest = vals[vals.length-1]
-                    const first = vals[0]
-                    const delta = latest - first
-                    const arrow = Math.abs(delta) < 0.02 ? '→' : (delta > 0 ? '↑' : '↓')
-                    const cls = delta > 0 ? 'text-[var(--c-success)]' : delta < 0 ? 'text-[var(--c-danger,#dc2626)]' : 'text-[var(--c-text-muted)]'
-                    return <span className={`text-[10px] font-medium ${cls}`}>{Math.round(latest*100)}% {arrow} {Math.round(delta*100)}%</span>
-                  })()}
-                </div>
-                <div className="flex h-10 items-end gap-1">
-                  {deckRetention7d.map(d=>{
-                    const pct = d.retention == null ? null : Math.round(d.retention*100)
-                    const height = pct==null ? 8 : 8 + Math.round((pct/100)*28)
-                    const color = pct==null ? 'var(--c-border)' : (pct >= 85 ? 'var(--c-accent)' : pct >= 70 ? 'var(--c-success)' : pct >= 55 ? 'var(--c-warn)' : 'var(--c-danger,#dc2626)')
-                    return (
-                      <div key={d.date} className="flex-1 relative rounded-sm overflow-hidden bg-[var(--c-border)]/30" style={{height: '36px'}} title={`${d.date} : ${pct==null ? 'No data' : pct + '%'}`}>
-                        <div className="absolute bottom-0 left-0 w-full transition-all" style={{height, background: color, opacity: pct==null ? 0.35 : 1}} />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+              )}
             {selectedDeck && deckReaction7d.length > 0 && (
               <div className="col-span-2 mt-3">
                 <div className="mb-1 flex items-center justify-between">
@@ -736,6 +510,8 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+      </div>
+      {/* end grid cards */}
       </div>
 
       <a
@@ -1049,281 +825,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {showWhatIf && whatIfResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={()=>setShowWhatIf(false)} role="dialog" aria-modal="true" aria-label="What-if シミュレーションモーダル">
-          <div className="w-full max-w-5xl h-[90vh] sm:h-[80vh] rounded-2xl border bg-[var(--c-surface)] shadow-xl text-sm flex flex-col" onClick={e=>e.stopPropagation()} tabIndex={-1}>
-            <div className="px-6 pt-5 pb-3 flex items-start justify-between border-b gap-4" role="heading" aria-level={2}>
-              <h2 className="text-base font-semibold leading-snug" id="whatif-title">What-if: 新カード導入シミュレーション ({horizon}d)</h2>
-              <button onClick={()=>setShowWhatIf(false)} className="rounded-md px-3 py-1 text-xs font-medium border hover:bg-[var(--c-surface-alt)]" aria-label="What-if 閉じる (ESC)" title="閉じる">閉じる</button>
-            </div>
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                {/* Summary Panel (Phase 1.30A UI refinement: key KPIs at a glance) */}
-                {whatIfResult && (
-                  <WhatIfSummaryBadges whatIfResult={whatIfResult} />
-                )}
-                <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-                  {/* Left column */}
-                  <div className="flex flex-col gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">追加新カード数
-                        <input type="number" aria-label="追加新カード数入力" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=>{
-                          const v = parseInt(e.target.value,10); if (!Number.isNaN(v)) setWhatIfN(Math.max(0, Math.min(200, v)))
-                        }} className="w-24 rounded border bg-transparent px-2 py-1 text-[12px]" />
-                        <input type="range" aria-label="追加新カード数スライダー" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=> setWhatIfN(parseInt(e.target.value,10))} className="flex-1" />
-                        <select aria-label="デッキ選択" value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]">
-                          <option value="ALL">All Decks</option>
-                          {upcomingLoadExt?.decks?.map(d=> (
-                            <option key={d.deckId} value={d.deckId}>{d.deckId}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="text-[10px] text-[var(--c-text-muted)] leading-snug">
-                        {whatIfChained ? '仮定: プリセット初期間隔で初期再出現 (固定間隔近似)。失敗/ズレ未考慮。W1合計は Week1 内オフセット (<=6)。' : '仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。'}
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
-                          <input type="checkbox" aria-label="Chained モード切替" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
-                          <span>Chained ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
-                          {whatIfChained && (
-                            <div className="ml-2 flex items-center gap-1 flex-wrap">
-                              <select
-                                value={chainPreset}
-                                onChange={e=> setChainPreset(e.target.value as ChainPresetKey)}
-                                className="rounded-md border bg-transparent px-1 py-0.5 text-[10px]"
-                                title="初期再出現プリセット"
-                              >
-                                <option value="standard">Std 1/3/7</option>
-                                <option value="fast">Fast 1/2/5</option>
-                                <option value="gentle">Gentle 2/5/9</option>
-                                <option value="minimal">Mini 3/7</option>
-                              </select>
-                              <div className="flex items-center gap-1 text-[9px] ml-1">
-                                {CHAIN_PRESETS[chainPreset].map(o=>{
-                                  const disabled = o >= horizon
-                                  return (
-                                    <span key={o} className={`px-1 py-0.5 rounded border ${disabled? 'opacity-40 line-through' : 'opacity-90'} bg-[var(--c-surface-alt)]`}>{`D${o}`}</span>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </label>
-                        {whatIfResult.chainDistribution && (
-                          <div className="text-[9px] text-[var(--c-text-muted)]">
-                            Dist: {whatIfResult.chainDistribution.map(c=>`D${c.dayOffset}:${c.added}`).join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border p-3">
-                        <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">Before</div>
-                        <div className="space-y-1 text-[11px]">
-                          <div>Peak <strong>{whatIfResult.original.peak?.count ?? 0}</strong></div>
-                          <div>Median <strong>{whatIfResult.original.median}</strong></div>
-                          <div>Class <strong className="capitalize">{whatIfResult.original.classification}</strong></div>
-                        </div>
-                      </div>
-                      <div className="rounded-lg border p-3">
-                        <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">After (+{whatIfResult.additional})</div>
-                        <div className="space-y-1 text-[11px]">
-                          <div>Peak <strong>{whatIfResult.simulated.peak?.count ?? 0}</strong> {whatIfResult.deltas.peak!==0 && (<span className={whatIfResult.deltas.peak>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.peak>0?'+':''}{whatIfResult.deltas.peak})</span>)}</div>
-                          <div>Median <strong>{whatIfResult.simulated.median}</strong> {whatIfResult.deltas.median!==0 && (<span className={whatIfResult.deltas.median>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.median>0?'+':''}{whatIfResult.deltas.median})</span>)}</div>
-                          <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
-                          <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
-                          {whatIfResult.expectedPeakWithFailures !== undefined && (
-                            <CollapsibleSection
-                              id="wf-early"
-                              title="Early Failures"
-                              collapsed={collapseEarly}
-                              onToggle={()=> setCollapseEarly(c=>!c)}
-                              summary={whatIfResult.againRateSampled !== undefined && (
-                                <>
-                                  Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%{whatIfResult.againRateFallbackUsed && ' (fallback)'}{typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
-                                </>
-                              )}
-                              small
-                            >
-                              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
-                                <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
-                                  <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
-                                )}</span>
-                              </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
-                            </CollapsibleSection>
-                          )}
-                          {whatIfResult.timeLoad && (
-                            <CollapsibleSection
-                              id="wf-time"
-                              title="Time Load"
-                              collapsed={collapseTime}
-                              onToggle={()=> setCollapseTime(c=>!c)}
-                              summary={
-                                <>per-card {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (fallback)'} n={whatIfResult.timeLoad.sampleSize}</>
-                              }
-                              small
-                            >
-                              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                <span>Peak Min <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
-                                  <span className={whatIfResult.timeLoad.peakTimeDeltaMinutes>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.timeLoad.peakTimeDeltaMinutes>0?'+':''}{whatIfResult.timeLoad.peakTimeDeltaMinutes})</span>
-                                )}</span>
-                                {whatIfResult.timeLoad.week1TotalMinutesSimulated !== undefined && (
-                                  <span>W1 Total <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
-                                )}
-                              </div>
-                              <div className="mt-1 flex flex-wrap gap-1 text-[8px] items-center">
-                                {whatIfResult.timeLoad.simulatedMinutesPerDay.map((m,i)=>(
-                                  <span key={i} className="px-1 py-0.5 rounded bg-[var(--c-surface-alt)]/60 border">D{i}:{m}</span>
-                                ))}
-                              </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">Median秒 * 件数 / 60 を 0.1 分丸め。早期失敗増も反映。</div>
-                            </CollapsibleSection>
-                          )}
-                          {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
-                            <CollapsibleSection
-                              id="wf-chain"
-                              title="Chain Summary"
-                              collapsed={collapseChain}
-                              onToggle={()=> setCollapseChain(c=>!c)}
-                              summary={<>( {CHAIN_PRESETS[chainPreset].join('/')})</>}
-                              small
-                            >
-                              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
-                                {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
-                              </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
-                            </CollapsibleSection>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        disabled={whatIfN<=0 || applying}
-                        onClick={()=>{
-                          if (whatIfN<=0) return
-                          setApplying(true)
-                          try {
-                            const ids = Array.from({length: whatIfN}, ()=> crypto.randomUUID())
-                            if (whatIfDeck === 'ALL') introduceNewCards(ids)
-                            else introduceNewCards(ids, whatIfDeck)
-                            setShowWhatIf(false)
-                          } catch {/* ignore */}
-                          finally {
-                            setApplying(false)
-                            setTimeout(()=>{ try{ setUpcomingLoad(getUpcomingReviewLoad(7)) }catch{} }, 10)
-                          }
-                        }}
-                        className="rounded-md bg-[var(--c-accent)] text-[var(--c-text-inverse,#fff)] px-3 py-1 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-                        title="実際に新カードを導入 (今日の残り枠に従い、余剰は無視)"
-                      >Apply</button>
-                      <button onClick={()=>setShowWhatIf(false)} className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-[var(--c-surface-alt)]">閉じる</button>
-                    </div>
-                  </div>
-                  {/* Right column */}
-                  <div className="flex flex-col gap-5">
-                    <div>
-                      <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{horizon}d Bars (シミュレーション差分)</div>
-                      <div className="flex h-24 sm:h-28 items-end gap-1" role="img" aria-label="日次レビュー件数のBefore/After比較バー">
-                        {whatIfResult.simulated.days.map((d,i)=>{
-                          const before = whatIfResult.original.days[i]?.count || 0
-                          const after = d.count
-                          const peak = Math.max(1, whatIfResult.simulated.peak?.count || 1)
-                          const heightAfter = 6 + (after/peak)*76
-                          const heightBefore = before>0? 6 + (before/peak)*76 : 0
-                          return (
-                            <div key={d.date} className="flex-1 relative rounded-sm bg-[var(--c-border)]/30 overflow-hidden" style={{height:'100%'}} title={`${d.date}\nBefore ${before} -> After ${after}`}>
-                              {heightBefore>0 && (
-                                <div className="absolute bottom-0 left-0 w-full" style={{height:heightBefore, background:'var(--c-accent)', opacity:0.35}} />
-                              )}
-                              {after>0 && (
-                                <div className="absolute bottom-0 left-0 w-full" style={{height:heightAfter, background:'var(--c-accent)'}} />
-                              )}
-                              {after-before>0 && (
-                                <div className="absolute inset-0 flex items-start justify-center pt-0.5">
-                                  <span className="text-[8px] font-medium text-[var(--c-text-inverse,#fff)] mix-blend-difference">+{after-before}</span>
-                                </div>
-                              )}
-                              <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-0.5 pointer-events-none">
-                                <span className="text-[8px] font-medium text-[var(--c-text-inverse,#fff)] mix-blend-difference" style={{opacity: after>0?0.85:0}}>{after}</span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div className="mt-1 text-[9px] text-[var(--c-text-secondary)]">淡色=Before, 濃色=After, +数値=追加分</div>
-                      {/* Mini Sparklines (Before vs After counts) */}
-                      <div className="mt-3 space-y-1" aria-label="スパークライン比較" role="group">
-                        {(() => {
-                          const beforeCounts = whatIfResult.original.days.map(d=> d.count)
-                          const afterCounts = whatIfResult.simulated.days.map(d=> d.count)
-                          const peak = Math.max(1, ...beforeCounts, ...afterCounts)
-                          const Row = ({label, data, color, bg}:{label:string; data:number[]; color:string; bg:string}) => (
-                            <div className="flex items-center gap-2" aria-label={`${label} sparkline`}>
-                              <span className="w-10 text-[8px] font-medium text-[var(--c-text-secondary)]">{label}</span>
-                              <div className="flex flex-1 h-4 gap-[2px]">
-                                {data.map((v,i)=>{
-                                  const h = (v/peak)
-                                  const barH = Math.max(2, Math.round(h*16))
-                                  return (
-                                    <div key={i} className="flex-1 relative rounded-sm overflow-hidden" style={{background:bg}} title={`D${i}: ${v}`}>
-                                      {v>0 && <div className="absolute bottom-0 left-0 w-full" style={{height:barH, background:color}} />}
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )
-                          return (
-                            <div className="rounded-md border p-2 bg-[var(--c-surface-alt)]/30" aria-label="Before/After sparkline comparison">
-                              <Row label="Before" data={beforeCounts} color="var(--c-border)" bg="var(--c-border)/20" />
-                              <Row label="After" data={afterCounts} color="var(--c-accent)" bg="var(--c-border)/20" />
-                              <div className="mt-1 text-[7px] text-[var(--c-text-muted)]">Compact sparkline: height = count/peak * 16px (min2). 0件はフラット。</div>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                    {whatIfResult.deckChainImpact && (
-                      <div className="rounded-lg border p-3 text-[10px] space-y-1">
-                        <div className="text-[9px] font-semibold text-[var(--c-text-secondary)] mb-1">Deck Chain Impact ({whatIfResult.deckChainImpact.deckId})</div>
-                        <div>Day1: {whatIfResult.deckChainImpact.day1Before} → {whatIfResult.deckChainImpact.day1After}</div>
-                        <div>Day3: {whatIfResult.deckChainImpact.day3Before} → {whatIfResult.deckChainImpact.day3After}</div>
-                        <div>Day7: {whatIfResult.deckChainImpact.day7Before} → {whatIfResult.deckChainImpact.day7After}</div>
-                        <div>Deck Peak: {whatIfResult.deckChainImpact.deckPeakBefore} → {whatIfResult.deckChainImpact.deckPeakAfter}</div>
-                        {whatIfResult.deckChainImpact.deckWeek1TotalBefore!=null && (
-                          <div>W1 Total: {whatIfResult.deckChainImpact.deckWeek1TotalBefore} → {whatIfResult.deckChainImpact.deckWeek1TotalAfter}</div>
-                        )}
-                        <div className="text-[8px] text-[var(--c-text-muted)]">簡易チェーンモデル (Preset: {CHAIN_PRESETS[chainPreset].join('/')}). 将来: 個別安定性ベース動的化予定。</div>
-                      </div>
-                    )}
-                    {!whatIfResult.deckChainImpact && whatIfResult.deckImpact && !whatIfChained && (
-                      <div className="rounded-lg border p-3 text-[10px] space-y-1">
-                        <div className="text-[9px] font-semibold text-[var(--c-text-secondary)] mb-1">Deck Impact ({whatIfResult.deckImpact.deckId})</div>
-                        <div>Day1: {whatIfResult.deckImpact.day1Before} → {whatIfResult.deckImpact.day1After}</div>
-                        <div>Deck Peak: {whatIfResult.deckImpact.deckPeakBefore} → {whatIfResult.deckImpact.deckPeakAfter}</div>
-                        {whatIfResult.deckImpact.deckWeek1TotalBefore!=null && (
-                          <div>W1 Total: {whatIfResult.deckImpact.deckWeek1TotalBefore} → {whatIfResult.deckImpact.deckWeek1TotalAfter}</div>
-                        )}
-                        <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Day1 のみ 1 回追加。複数日学習連鎖は未考慮。</div>
-                      </div>
-                    )}
-                    <div className="rounded-lg border p-3 grid grid-cols-2 gap-y-1 gap-x-4 text-[10px]">
-                      <div className="text-[var(--c-text-secondary)]">Peak</div><div>{whatIfResult.original.peak?.count ?? 0} → {whatIfResult.simulated.peak?.count ?? 0}</div>
-                      <div className="text-[var(--c-text-secondary)]">Median</div><div>{whatIfResult.original.median} → {whatIfResult.simulated.median}</div>
-                      <div className="text-[var(--c-text-secondary)]">Class</div><div>{whatIfResult.original.classification} {whatIfResult.deltas.classificationChanged && <span className="mx-1">→</span>} {whatIfResult.deltas.classificationChanged && <span className="capitalize">{whatIfResult.simulated.classification}</span>}</div>
-                      <div className="text-[var(--c-text-secondary)]">Peak Δ</div><div className={whatIfResult.deltas.peak>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>{whatIfResult.deltas.peak>0?'+':''}{whatIfResult.deltas.peak} ({whatIfResult.deltas.peakIncreasePct})</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* (Old inline What-if modal removed; now using <WhatIfDialog /> above) */}
 
       <div>
         <button onClick={()=>setShowReviewModal(true)} className="mt-6 rounded-xl border px-4 py-2 text-sm font-medium shadow-sm hover:bg-[var(--c-surface-alt)]">
@@ -1402,95 +904,3 @@ export default function ProfilePage() {
 }
 
 // --- Extracted helper component: WhatIf summary badge list ---
-function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
-  const peakBefore = whatIfResult.original.peak?.count ?? 0
-  const peakAfter = whatIfResult.simulated.peak?.count ?? 0
-  const peakDelta = peakAfter - peakBefore
-  const peakDeltaPct = peakBefore>0 ? Math.round((peakDelta/peakBefore)*100) : 0
-  const added = whatIfResult.additional
-  const chainW1 = whatIfResult.chainWeek1Added
-  const expFails = whatIfResult.expectedFailuresWeek1
-  const againRate = whatIfResult.againRateSampled
-  const peakWithFails = whatIfResult.expectedPeakWithFailures
-  const peakWithFailsDelta = (peakWithFails ?? peakAfter) - peakAfter
-  const tl = whatIfResult.timeLoad
-  const peakMinBefore = tl?.peakTimeMinutesOriginal
-  const peakMinAfter = tl?.peakTimeMinutesSimulated
-  const peakMinDelta = (peakMinAfter ?? 0) - (peakMinBefore ?? 0)
-  const w1MinBefore = tl?.week1TotalMinutesOriginal
-  const w1MinAfter = tl?.week1TotalMinutesSimulated
-  const w1MinDelta = (w1MinAfter ?? 0) - (w1MinBefore ?? 0)
-
-  const badges: React.ReactNode[] = []
-  badges.push(
-    <KpiBadge key="added" label="Added" value={'+'+added} tone="neutral" />
-  )
-  badges.push(
-    <KpiBadge
-      key="peak"
-      label="Peak"
-      value={`${peakBefore}→${peakAfter}`}
-      extra={peakDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakDelta>0?'+':''}{peakDelta} ({peakDeltaPct}%)</span>}
-      tone={decideDeltaTone(peakDelta)}
-    />
-  )
-  if (peakMinAfter!==undefined && peakMinBefore!==undefined) {
-    badges.push(
-      <KpiBadge
-        key="peak-min"
-        label="Peak Min"
-        value={`${peakMinBefore}→${peakMinAfter}`}
-        extra={peakMinDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakMinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakMinDelta>0?'+':''}{peakMinDelta}</span>}
-        tone={decideDeltaTone(peakMinDelta)}
-      />
-    )
-  }
-  if (w1MinAfter!==undefined && w1MinBefore!==undefined) {
-    badges.push(
-      <KpiBadge
-        key="w1-min"
-        label="W1 Min"
-        value={`${w1MinBefore}→${w1MinAfter}`}
-        extra={w1MinDelta!==0 && <span className={`ml-0.5 text-[9px] ${w1MinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{w1MinDelta>0?'+':''}{w1MinDelta}</span>}
-        tone={decideDeltaTone(w1MinDelta)}
-      />
-    )
-  }
-  if (chainW1) {
-    badges.push(<KpiBadge key="w1plus" label="W1+" value={chainW1} tone="neutral" title="Week1 offset cards (<=D6)" />)
-  }
-  if (expFails!==undefined) {
-    badges.push(
-      <KpiBadge
-        key="exp-again"
-        label="Exp Again"
-        value={expFails}
-        extra={againRate!=null && <span className="text-[8px] opacity-70">@{Math.round((againRate||0)*100)}%</span>}
-        tone={expFails>0? 'warn':'muted'}
-        title="Expected early Again count (Week1)"
-      />
-    )
-  }
-  if (peakWithFails!==undefined && peakWithFails !== peakAfter) {
-    badges.push(
-      <KpiBadge
-        key="peak-fails"
-        label="Peak(+fails)"
-        value={`${peakAfter}→${peakWithFails}`}
-        extra={peakWithFailsDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakWithFailsDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakWithFailsDelta>0?'+':''}{peakWithFailsDelta}</span>}
-        tone={decideDeltaTone(peakWithFailsDelta)}
-      />
-    )
-  }
-
-  return (
-    <div className="mb-6" aria-label="What-if summary" role="group">
-      <div className="flex flex-wrap gap-2" role="list">{badges}</div>
-      <div className="mt-1 text-[8px] text-[var(--c-text-muted)] leading-snug flex flex-wrap gap-x-4 gap-y-1">
-        <span>色: 赤=負荷増 / 緑=負荷減 / 灰=変化小</span>
-        <span>Peak Min=ピーク日の推定所要分</span>
-        {whatIfResult.timeLoad?.usedFallback && <span>Time Load: fallback median</span>}
-      </div>
-    </div>
-  )
-}

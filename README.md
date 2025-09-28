@@ -39,9 +39,14 @@ Profile ページの「What-if」から追加新カード数を入力すると 7
 
 ```bash
 npx ts-node scripts/whatif-test.ts
+
+# 機械処理しやすい JSON Lines (1行=1レコード) 出力
+npx ts-node scripts/whatif-test.ts --jsonl > whatif.jsonl
 ```
 
-出力: 各シナリオ (単発 / Chain プリセット / horizon 差異) の Peak, Peak(+fails), 期待 Again 件数, 推定所要分 (Peak Min / Week1) を JSON で列挙。
+通常モードは人間可読なブロック JSON。`--jsonl` 指定時は各シナリオを 1 行 JSON にしてストリーム処理や jq / grep / BigQuery 取り込みなどに利用しやすくしています。
+
+出力フィールド例: `mode` (single|chain), `preset`, `horizon`, `added`, `peakBefore/After`, `peakDelta`, `peakWithFails`, `expectedAgain`, `timeLoad.peakMin`, `timeLoad.week1Total` など。
 
 ## 開発ユーティリティ
 
