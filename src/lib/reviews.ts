@@ -350,6 +350,62 @@ export function getReviewPerformance(now = Date.now()): ReviewPerformance {
   return { count: total, again, hard, good, easy, retention, againRate }
 }
 
+// ---- Phase 1.29B: Recent Again Rate Estimation Utility ----
+// Provides a lightweight rolling Again rate with clamping + fallback semantics.
+// Rationale: feed expected early failures model in What-if simulation.
+export interface RecentAgainRateResult {
+  againRateSampled: number | null // null if no data AND fallback disabled
+  againSampleSize: number
+  fallbackUsed: boolean
+  raw: number | null // unclamped raw ratio (null if insufficient)
+  windowDays: number
+}
+
+export interface RecentAgainRateOptions {
+  lookbackDays?: number // default 14
+  minSamples?: number   // default 40
+  clampMin?: number     // default 0.02
+  clampMax?: number     // default 0.55
+  fallbackDefault?: number // default 0.18
+  now?: number
+  allowFallback?: boolean // default true
+}
+
+export function computeRecentAgainRate(opts: RecentAgainRateOptions = {}): RecentAgainRateResult {
+  const {
+    lookbackDays = 14,
+    minSamples = 40,
+    clampMin = 0.02,
+    clampMax = 0.55,
+    fallbackDefault = 0.18,
+    now = Date.now(),
+    allowFallback = true,
+  } = opts
+  if (typeof window === 'undefined') {
+    return { againRateSampled: null, againSampleSize: 0, fallbackUsed: false, raw: null, windowDays: lookbackDays }
+  }
+  if (lookbackDays <= 0) {
+    return { againRateSampled: null, againSampleSize: 0, fallbackUsed: false, raw: null, windowDays: lookbackDays }
+  }
+  const dayMs = 24*60*60*1000
+  const startTs = now - lookbackDays * dayMs
+  const logs = loadLogs().filter(l => l.reviewedAt >= startTs)
+  let again = 0; let total = 0
+  for (const l of logs) {
+    total++
+    if (l.grade === 'Again') again++
+  }
+  if (total < minSamples) {
+    if (!allowFallback) {
+      return { againRateSampled: null, againSampleSize: total, fallbackUsed: false, raw: null, windowDays: lookbackDays }
+    }
+    return { againRateSampled: fallbackDefault, againSampleSize: total, fallbackUsed: true, raw: null, windowDays: lookbackDays }
+  }
+  const raw = total > 0 ? again / total : 0
+  const clamped = Math.min(clampMax, Math.max(clampMin, raw))
+  return { againRateSampled: clamped, againSampleSize: total, fallbackUsed: false, raw, windowDays: lookbackDays }
+}
+
 // ---------------- New Card Introduction (simple daily cap) ----------------
 export type NewCardAvailability = {
   date: string
@@ -867,6 +923,13 @@ export interface WhatIfResult {
   // Phase 1.28 (optional aggregate for chained mode, horizon dependent)
   chainWeek1Added?: number // sum of added counts whose dayOffset <=6
   chainWeek2Added?: number // sum of added counts whose 7<=dayOffset<=13 (when horizon>=14)
+  // Phase 1.29B expected failures (Again) modeling
+  againRateSampled?: number | null
+  againSampleSize?: number
+  againRateFallbackUsed?: boolean
+  expectedFailuresWeek1?: number
+  expectedPeakWithFailures?: number
+  expectedPeakDelta?: number
 }
 
 // Simulate introducing `additional` new cards today (they first reappear tomorrow) and compute impact on 7-day (or horizon) load.
@@ -1007,14 +1070,61 @@ export function simulateNewCardsImpactChained(additional: number, horizonDays = 
   const peakIncreasePct = (original.peak && original.peak.count > 0) ? (deltaPeak / original.peak.count) : 0
   const chainWeek1Added = distribution.filter(d=> d.dayOffset<=6).reduce((a,b)=>a+b.added,0) || undefined
   const chainWeek2Added = distribution.filter(d=> d.dayOffset>=7 && d.dayOffset<=13).reduce((a,b)=>a+b.added,0) || undefined
+  // ---- Phase 1.29B Expected Failures (Again) augmentation ----
+  // Estimate early lapses to adjust peak (placing all failures on Day2 if within horizon)
+  let againRateSampled: number | null | undefined
+  let againSampleSize: number | undefined
+  let againRateFallbackUsed: boolean | undefined
+  let expectedFailuresWeek1: number | undefined
+  let expectedPeakWithFailures: number | undefined
+  let expectedPeakDelta: number | undefined
+  try {
+    const rate = computeRecentAgainRate({ lookbackDays:14, minSamples:40 })
+    againRateSampled = rate.againRateSampled
+    againSampleSize = rate.againSampleSize
+    againRateFallbackUsed = rate.fallbackUsed
+    // Week1 new exposures count (number of chain offsets <=6) * additional
+    const week1NewCards = chain.filter(o=> o<=6).length * additional
+    if (week1NewCards > 0 && againRateSampled !== null) {
+      const earlyMultiplier = 1.0
+      expectedFailuresWeek1 = Math.round(week1NewCards * againRateSampled * earlyMultiplier)
+      if (expectedFailuresWeek1 > 0 && horizonDays > 1) {
+        // place on Day2 (index 2? index 1 is tomorrow). Since index 0 = today, Day2 => offset 2? Actually Day1= index1, Day2=index2
+        const day2Index = 2
+        if (simulatedDays.length > day2Index) {
+          const peakBefore = simulated.peak?.count || 0
+          simulatedDays[day2Index] = { ...simulatedDays[day2Index], count: simulatedDays[day2Index].count + expectedFailuresWeek1 }
+          // recompute peak after failures
+          const countsAfter = simulatedDays.map(d=>d.count)
+          let peakAfter: { date: string; count: number } | null = null
+          countsAfter.forEach((c,i)=>{ if (peakAfter === null || c > peakAfter.count) peakAfter = { date: simulatedDays[i].date, count: c } })
+          expectedPeakWithFailures = (peakAfter as { date: string; count: number } | null)?.count
+          expectedPeakDelta = expectedPeakWithFailures !== undefined ? expectedPeakWithFailures - peakBefore : undefined
+        } else {
+          // horizon too short to place failures; treat as 0 impact
+          expectedPeakWithFailures = simulated.peak?.count
+          expectedPeakDelta = 0
+        }
+      } else {
+        expectedPeakWithFailures = simulated.peak?.count
+        expectedPeakDelta = 0
+      }
+    }
+  } catch {}
   return {
     additional,
     original,
-    simulated,
+    simulated: { ...simulated, days: simulatedDays },
     deltas: { peak: deltaPeak, median: parseFloat(deltaMedian.toFixed(2)), peakIncreasePct: parseFloat((peakIncreasePct*100).toFixed(2)), classificationChanged: original.classification !== simulated.classification },
     chainDistribution: distribution,
     ...(chainWeek1Added? { chainWeek1Added }: {}),
-    ...(chainWeek2Added? { chainWeek2Added }: {})
+    ...(chainWeek2Added? { chainWeek2Added }: {}),
+    ...(againRateSampled!==undefined? { againRateSampled }: {}),
+    ...(againSampleSize!==undefined? { againSampleSize }: {}),
+    ...(againRateFallbackUsed!==undefined? { againRateFallbackUsed }: {}),
+    ...(expectedFailuresWeek1!==undefined? { expectedFailuresWeek1 }: {}),
+    ...(expectedPeakWithFailures!==undefined? { expectedPeakWithFailures }: {}),
+    ...(expectedPeakDelta!==undefined? { expectedPeakDelta }: {}),
   }
 }
 

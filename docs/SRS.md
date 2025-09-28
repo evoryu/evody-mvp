@@ -545,6 +545,73 @@ UI:
 
 関連コード: `reviews.ts (CHAIN_PRESETS / simulateNewCardsImpactChained*)`, `profile/page.tsx` What-if モーダル (プリセット select / チップ / Chain Summary)。
 
+### Phase 1.29B: Expected Failures (Again) モデル導入
+
+目的:
+
+- What-if シミュレーションが新規導入カードを“全て成功”と仮定し早期負荷 (Day2 付近) を過小評価していた問題を緩和。
+- 過去直近レビュー結果から Again 率を推定し、Week1 内に期待される再レビュー(失敗再出現)を簡易加算して Peak リスクを可視化。
+
+範囲 (In Scope):
+
+1. 直近 lookbackDays(=14) の ReviewLog 集計で againRateRaw = again / total。
+2. サンプル不足 (total < 40) は fallback=0.18 を使用し fallbackUsed=true。
+3. clamp: 0.02 <= againRateEffective <= 0.55。
+4. 新規カードの Week1 初回露出枚数 (オフセット <=6 の chain buckets * additional) から expectedFailuresWeek1 = round(Nw1 * againRateEffective)。
+5. 期待失敗は全て Day2 (index2) に集約 (horizon>2 のみ)。
+6. Peak 再計算: expectedPeakWithFailures / expectedPeakDelta。
+7. WhatIfResult 拡張フィールド: againRateSampled, againSampleSize, againRateFallbackUsed, expectedFailuresWeek1, expectedPeakWithFailures, expectedPeakDelta。
+
+非目標 (Out of Scope):
+
+- 多段失敗再帰 / 反復 Again モデル化
+- デッキ別 Again 率（グローバル集約のみ）
+- Monte Carlo / 信頼区間表示
+- 失敗分散配置 (Day2/Day3 split) — 未来フェーズで検討
+
+計算式:
+
+```
+week1NewCards = count(offset in chain where offset <= 6) * additional
+againRateEffective = clamp(rawAgainRate or fallback, 0.02, 0.55)
+expectedFailuresWeek1 = round(week1NewCards * againRateEffective)
+// placement
+if horizonDays > 2: add expectedFailuresWeek1 to dayIndex=2
+```
+
+エッジケース:
+
+- additional=0 → expectedFailuresWeek1=0, Peak 差分なし
+- horizon<=2 → 再配置先が無いので Peak 変動 0 (値は simulated.peak を流用)
+- Week1 offset が存在しない preset (例: horizon 短縮) → week1NewCards=0
+- サンプル不足 → fallbackUsed=true / raw=null
+
+UI:
+
+- What-if After ブロックに “Early Failures” セクション (Rate / Expected W1 Again / Peak(+fails)) を常時表示
+- fallbackUsed 時 (fallback) ラベル併記
+- Tooltip (簡易説明) 将来追加余地
+
+関連コード: `reviews.ts#computeRecentAgainRate`, `simulateNewCardsImpactChained` 内 Phase 1.29B augmentation, `profile/page.tsx` What-if Early Failures UI。
+
+将来拡張候補:
+
+1. Failure 分散 (Day2/Day3 比率) 可変化
+2. Deck セグメント別 againRate
+3. Wilson 区間による信頼レンジ表示
+4. Monte Carlo による Peak 分布 (P90 など)
+5. 時間コスト (反応時間平均 * 件数) の並列表示
+
+テスト観点:
+
+- サンプル不足 => fallbackUsed=true / againRateSampled=fallback / expectedFailuresWeek1>0 で Peak 増分反映
+- additional=0 => expectedFailuresWeek1 undefined or 0 / expectedPeakDelta 0
+- high raw rate >0.55 => clamp 0.55
+- low raw rate <0.02 => clamp 0.02
+- horizon=2 => expectedPeakDelta 0 (配置不可)
+
+---
+
 ```ts
 export type ReviewLog = {
   id: string

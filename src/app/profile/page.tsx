@@ -1122,6 +1122,26 @@ export default function ProfilePage() {
                           <div>Median <strong>{whatIfResult.simulated.median}</strong> {whatIfResult.deltas.median!==0 && (<span className={whatIfResult.deltas.median>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.median>0?'+':''}{whatIfResult.deltas.median})</span>)}</div>
                           <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
                           <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
+                          {whatIfResult.expectedPeakWithFailures !== undefined && (
+                            <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2">Early Failures
+                                {whatIfResult.againRateSampled !== undefined && (
+                                  <span className="text-[8px] font-normal text-[var(--c-text-muted)]">
+                                    Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%
+                                    {whatIfResult.againRateFallbackUsed && ' (fallback)'}
+                                    {typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
+                                <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
+                                  <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
+                                )}</span>
+                              </div>
+                              <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                            </div>
+                          )}
                           {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
                             <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
                               <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2">Chain Summary
