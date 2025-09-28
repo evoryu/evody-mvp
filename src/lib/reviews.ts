@@ -406,6 +406,86 @@ export function computeRecentAgainRate(opts: RecentAgainRateOptions = {}): Recen
   return { againRateSampled: clamped, againSampleSize: total, fallbackUsed: false, raw, windowDays: lookbackDays }
 }
 
+// ---- Phase 1.30A: Reaction Time Stats (median / p75) ----
+export interface ReactionStats {
+  medianSec: number
+  p75Sec: number
+  sampleSize: number
+  filteredOutliers: number
+  usedFallback: boolean
+  windowDays: number
+}
+
+export interface ReactionStatsOptions {
+  lookbackDays?: number // default 14
+  minSamples?: number   // default 30
+  fallbackSecondsPerCard?: number // default 6s
+  outlierQuantile?: number // default 0.95 (remove > q95)
+  clampMaxSec?: number // default 40 (avoid absurd long)
+  now?: number
+}
+
+function quantile(sorted: number[], q: number): number {
+  if (!sorted.length) return 0
+  const pos = (sorted.length - 1) * q
+  const base = Math.floor(pos)
+  const rest = pos - base
+  if (sorted[base+1] !== undefined) return sorted[base] + rest * (sorted[base+1]-sorted[base])
+  return sorted[base]
+}
+
+export function computeRecentReactionStats(opts: ReactionStatsOptions = {}): ReactionStats {
+  const {
+    lookbackDays = 14,
+    minSamples = 30,
+    fallbackSecondsPerCard = 6,
+    outlierQuantile = 0.95,
+    clampMaxSec = 40,
+    now = Date.now(),
+  } = opts
+  if (typeof window === 'undefined') {
+    return { medianSec: fallbackSecondsPerCard, p75Sec: fallbackSecondsPerCard, sampleSize:0, filteredOutliers:0, usedFallback:true, windowDays: lookbackDays }
+  }
+  const dayMs = 24*60*60*1000
+  const startTs = now - lookbackDays * dayMs
+  // collect reaction times
+  const times: number[] = []
+  for (const l of loadLogs()) {
+    if (l.reviewedAt < startTs) continue
+    if (typeof l.reactionTimeMs === 'number' && l.reactionTimeMs > 0 && l.reactionTimeMs < 60000) {
+      const sec = l.reactionTimeMs / 1000
+      times.push(sec)
+    }
+  }
+  if (times.length < minSamples) {
+    return { medianSec: fallbackSecondsPerCard, p75Sec: fallbackSecondsPerCard, sampleSize: times.length, filteredOutliers:0, usedFallback:true, windowDays: lookbackDays }
+  }
+  times.sort((a,b)=>a-b)
+  // determine outlier threshold
+  const q95 = quantile(times, outlierQuantile)
+  const filtered = times.filter(t=> t <= q95)
+  const filteredOutliers = times.length - filtered.length
+  const arr = filtered.length >= minSamples/2 ? filtered : times // fallback to original if over-filtered
+  function median(a:number[]): number {
+    if (!a.length) return 0
+    const m = Math.floor(a.length/2)
+    if (a.length % 2) return a[m]
+    return (a[m-1]+a[m])/2
+  }
+  const med = median(arr)
+  const p75 = quantile(arr, 0.75)
+  const medClamped = Math.min(clampMaxSec, Math.max(1, med))
+  const p75Clamped = Math.min(clampMaxSec, Math.max(medClamped, p75))
+  return {
+    medianSec: parseFloat(medClamped.toFixed(2)),
+    p75Sec: parseFloat(p75Clamped.toFixed(2)),
+    sampleSize: times.length,
+    filteredOutliers,
+    usedFallback: false,
+    windowDays: lookbackDays,
+  }
+}
+
 // ---------------- New Card Introduction (simple daily cap) ----------------
 export type NewCardAvailability = {
   date: string
@@ -930,6 +1010,20 @@ export interface WhatIfResult {
   expectedFailuresWeek1?: number
   expectedPeakWithFailures?: number
   expectedPeakDelta?: number
+  // Phase 1.30A time load projection
+  timeLoad?: {
+    perCardMedianSec: number
+    perCardP75Sec: number
+    sampleSize: number
+    usedFallback: boolean
+    originalMinutesPerDay: number[]
+    simulatedMinutesPerDay: number[]
+    peakTimeMinutesOriginal: number
+    peakTimeMinutesSimulated: number
+    peakTimeDeltaMinutes: number
+    week1TotalMinutesOriginal?: number
+    week1TotalMinutesSimulated?: number
+  }
 }
 
 // Simulate introducing `additional` new cards today (they first reappear tomorrow) and compute impact on 7-day (or horizon) load.
@@ -974,6 +1068,33 @@ export function simulateNewCardsImpact(additional: number, horizonDays = 7, now 
   const deltaPeak = (simulated.peak?.count || 0) - (original.peak?.count || 0)
   const deltaMedian = simulated.median - original.median
   const peakIncreasePct = (original.peak && original.peak.count > 0) ? (deltaPeak / original.peak.count) : 0
+  // Phase 1.30A time load projection for non-chained variant
+  let timeLoad: WhatIfResult['timeLoad'] | undefined
+  try {
+    const r = computeRecentReactionStats({})
+    const per = r.medianSec
+    const toMinutes = (c:number)=> parseFloat(((c*per)/60).toFixed(1))
+    const originalMinutesPerDay = original.days.map(d=> toMinutes(d.count))
+    const simulatedMinutesPerDay = simulated.days.map(d=> toMinutes(d.count))
+    const peakTimeMinutesOriginal = Math.max(...originalMinutesPerDay,0)
+    const peakTimeMinutesSimulated = Math.max(...simulatedMinutesPerDay,0)
+    const w1Len = Math.min(7, originalMinutesPerDay.length)
+    const week1TotalMinutesOriginal = parseFloat(originalMinutesPerDay.slice(0,w1Len).reduce((a,b)=>a+b,0).toFixed(1))
+    const week1TotalMinutesSimulated = parseFloat(simulatedMinutesPerDay.slice(0,w1Len).reduce((a,b)=>a+b,0).toFixed(1))
+    timeLoad = {
+      perCardMedianSec: r.medianSec,
+      perCardP75Sec: r.p75Sec,
+      sampleSize: r.sampleSize,
+      usedFallback: r.usedFallback,
+      originalMinutesPerDay,
+      simulatedMinutesPerDay,
+      peakTimeMinutesOriginal: parseFloat(peakTimeMinutesOriginal.toFixed(1)),
+      peakTimeMinutesSimulated: parseFloat(peakTimeMinutesSimulated.toFixed(1)),
+      peakTimeDeltaMinutes: parseFloat((peakTimeMinutesSimulated - peakTimeMinutesOriginal).toFixed(1)),
+      week1TotalMinutesOriginal,
+      week1TotalMinutesSimulated,
+    }
+  } catch {}
   return {
     additional,
     original,
@@ -983,7 +1104,8 @@ export function simulateNewCardsImpact(additional: number, horizonDays = 7, now 
       median: parseFloat(deltaMedian.toFixed(2)),
       peakIncreasePct: parseFloat((peakIncreasePct*100).toFixed(2)),
       classificationChanged: original.classification !== simulated.classification
-    }
+    },
+    ...(timeLoad? { timeLoad }: {})
   }
 }
 
@@ -1125,6 +1247,35 @@ export function simulateNewCardsImpactChained(additional: number, horizonDays = 
     ...(expectedFailuresWeek1!==undefined? { expectedFailuresWeek1 }: {}),
     ...(expectedPeakWithFailures!==undefined? { expectedPeakWithFailures }: {}),
     ...(expectedPeakDelta!==undefined? { expectedPeakDelta }: {}),
+    // Phase 1.30A time load projection
+    ...(() => {
+      try {
+        const r = computeRecentReactionStats({})
+        const per = r.medianSec // use median for projection
+        const toMinutes = (count:number) => parseFloat(((count * per)/60).toFixed(1))
+        const originalMinutesPerDay = original.days.map(d=> toMinutes(d.count))
+        const simulatedMinutesPerDay = simulatedDays.map(d=> toMinutes(d.count))
+        const peakTimeMinutesOriginal = Math.max(...originalMinutesPerDay, 0)
+        const peakTimeMinutesSimulated = Math.max(...simulatedMinutesPerDay, 0)
+        const peakTimeDeltaMinutes = parseFloat((peakTimeMinutesSimulated - peakTimeMinutesOriginal).toFixed(1))
+        const w1Len = Math.min(7, originalMinutesPerDay.length)
+        const week1TotalMinutesOriginal = parseFloat(originalMinutesPerDay.slice(0,w1Len).reduce((a,b)=>a+b,0).toFixed(1))
+        const week1TotalMinutesSimulated = parseFloat(simulatedMinutesPerDay.slice(0,w1Len).reduce((a,b)=>a+b,0).toFixed(1))
+        return { timeLoad: {
+          perCardMedianSec: r.medianSec,
+          perCardP75Sec: r.p75Sec,
+          sampleSize: r.sampleSize,
+            usedFallback: r.usedFallback,
+          originalMinutesPerDay,
+          simulatedMinutesPerDay,
+          peakTimeMinutesOriginal: parseFloat(peakTimeMinutesOriginal.toFixed(1)),
+          peakTimeMinutesSimulated: parseFloat(peakTimeMinutesSimulated.toFixed(1)),
+          peakTimeDeltaMinutes,
+          week1TotalMinutesOriginal,
+          week1TotalMinutesSimulated,
+        } }
+      } catch { return {} }
+    })(),
   }
 }
 

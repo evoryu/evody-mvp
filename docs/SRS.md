@@ -557,7 +557,7 @@ UI:
 1. 直近 lookbackDays(=14) の ReviewLog 集計で againRateRaw = again / total。
 2. サンプル不足 (total < 40) は fallback=0.18 を使用し fallbackUsed=true。
 3. clamp: 0.02 <= againRateEffective <= 0.55。
-4. 新規カードの Week1 初回露出枚数 (オフセット <=6 の chain buckets * additional) から expectedFailuresWeek1 = round(Nw1 * againRateEffective)。
+4. 新規カードの Week1 初回露出枚数 (オフセット <=6 の chain buckets _ additional) から expectedFailuresWeek1 = round(Nw1 _ againRateEffective)。
 5. 期待失敗は全て Day2 (index2) に集約 (horizon>2 のみ)。
 6. Peak 再計算: expectedPeakWithFailures / expectedPeakDelta。
 7. WhatIfResult 拡張フィールド: againRateSampled, againSampleSize, againRateFallbackUsed, expectedFailuresWeek1, expectedPeakWithFailures, expectedPeakDelta。
@@ -600,7 +600,7 @@ UI:
 2. Deck セグメント別 againRate
 3. Wilson 区間による信頼レンジ表示
 4. Monte Carlo による Peak 分布 (P90 など)
-5. 時間コスト (反応時間平均 * 件数) の並列表示
+5. 時間コスト (反応時間平均 \* 件数) の並列表示
 
 テスト観点:
 
@@ -611,6 +611,77 @@ UI:
 - horizon=2 => expectedPeakDelta 0 (配置不可)
 
 ---
+
+### Phase 1.30A: Time Load Projection (学習時間推定)
+
+目的:
+
+- 件数ベース指標だけでは直感的負荷が掴みにくい → “何分かかるか” を可視化し新規追加判断を改善。
+- Peak 件数 + Peak 分数 の二軸で過負荷検知精度を向上。
+
+スコープ:
+
+1. 過去14日 reactionTimeMs から median / p75 推定 (outlier >95p 除外)。
+2. What-if (単発 / chained) original / simulated の各日件数→分換算 (medianSec \* count / 60, 0.1分丸め)。
+3. Week1 合計分 / Peak 分 を出力。期待失敗分 (Phase1.29B) も反映。
+4. サンプル不足 (n<30) は fallback 6s/枚 & 表示。
+
+非目標:
+
+- デッキ別時間分布 / Monte Carlo / 難易度重み / 時間CI。
+
+計算アルゴリズム概要:
+
+```
+times = reactionTimeMs (0<ms<60000) in last 14d
+if len(times) < 30 => fallbackSecondsPerCard=6
+q95 = quantile(times,0.95); filtered = times<=q95
+arr = filtered if len(filtered)>=15 else times
+medianSec = clamp(median(arr), 1..40)
+p75Sec = clamp(q(arr,0.75), medianSec..40)
+minutes(day) = round1( count(day) * medianSec /60 )
+peakTimeDelta = peak(simulatedMinutes) - peak(originalMinutes)
+week1Total = sum(minutes[0..min(6,horizon-1)])
+```
+
+WhatIfResult 拡張 `timeLoad`:
+
+```ts
+timeLoad?: {
+  perCardMedianSec; perCardP75Sec; sampleSize; usedFallback;
+  originalMinutesPerDay; simulatedMinutesPerDay;
+  peakTimeMinutesOriginal; peakTimeMinutesSimulated; peakTimeDeltaMinutes;
+  week1TotalMinutesOriginal?; week1TotalMinutesSimulated?;
+}
+```
+
+UI:
+
+- What-if After 内 “Time Load” セクション (Peak Min / W1 Total / D0..Dn タグ / per-card sec + fallback)
+- Early Failures 下段。
+
+エッジケース:
+
+- ログ不足→fallbackUsed
+- outlier 除去後サンプル半減→元配列使用
+- horizon<2→week1Total=存在日合計
+- medianSec<1→1 clamp, >40→40 clamp
+
+テスト観点:
+
+- n=0 fallback / delta=0
+- outlier 120s 混入→95p 除去で median 安定
+- additional=0 → arrays identical
+- chained+expectedFailures → Day2 minutes 増
+
+将来拡張:
+
+1. Deck segmentation minutes
+2. 時間信頼区間 / P90
+3. 難易度×時間重み
+4. Monte Carlo peak time 分布
+
+関連コード: `reviews.ts (computeRecentReactionStats / simulateNewCardsImpact* 時間換算)`, `profile/page.tsx` Time Load UI。
 
 ```ts
 export type ReviewLog = {

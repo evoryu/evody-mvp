@@ -71,6 +71,10 @@ export default function ProfilePage() {
   const [deckStack14, setDeckStack14] = React.useState(false)
   // What-if Simulation state (Phase 1.23)
   const [showWhatIf, setShowWhatIf] = React.useState(false)
+  // Collapse states for What-if detail sections (Phase 1.30A UI refinement)
+  const [collapseEarly, setCollapseEarly] = React.useState(false)
+  const [collapseTime, setCollapseTime] = React.useState(false)
+  const [collapseChain, setCollapseChain] = React.useState(false)
   const [whatIfN, setWhatIfN] = React.useState(0)
   const [whatIfResult, setWhatIfResult] = React.useState<WhatIfResult | null>(null)
   const [whatIfChained, setWhatIfChained] = React.useState(false) // Phase 1.27 toggle
@@ -1044,24 +1048,77 @@ export default function ProfilePage() {
       )}
 
       {showWhatIf && whatIfResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={()=>setShowWhatIf(false)}>
-          <div className="w-full max-w-5xl h-[90vh] sm:h-[80vh] rounded-2xl border bg-[var(--c-surface)] shadow-xl text-sm flex flex-col" onClick={e=>e.stopPropagation()}>
-            <div className="px-6 pt-5 pb-3 flex items-start justify-between border-b gap-4">
-              <h2 className="text-base font-semibold leading-snug">What-if: 新カード導入シミュレーション ({horizon}d)</h2>
-              <button onClick={()=>setShowWhatIf(false)} className="rounded-md px-3 py-1 text-xs font-medium border hover:bg-[var(--c-surface-alt)]">閉じる</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={()=>setShowWhatIf(false)} role="dialog" aria-modal="true" aria-label="What-if シミュレーションモーダル">
+          <div className="w-full max-w-5xl h-[90vh] sm:h-[80vh] rounded-2xl border bg-[var(--c-surface)] shadow-xl text-sm flex flex-col" onClick={e=>e.stopPropagation()} tabIndex={-1}>
+            <div className="px-6 pt-5 pb-3 flex items-start justify-between border-b gap-4" role="heading" aria-level={2}>
+              <h2 className="text-base font-semibold leading-snug" id="whatif-title">What-if: 新カード導入シミュレーション ({horizon}d)</h2>
+              <button onClick={()=>setShowWhatIf(false)} className="rounded-md px-3 py-1 text-xs font-medium border hover:bg-[var(--c-surface-alt)]" aria-label="What-if 閉じる (ESC)" title="閉じる">閉じる</button>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col">
               <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                {/* Summary Panel (Phase 1.30A UI refinement: key KPIs at a glance) */}
+                {whatIfResult && (
+                  <div className="mb-6" aria-label="What-if summary" role="group">
+                    {(() => {
+                      const peakBefore = whatIfResult.original.peak?.count ?? 0
+                      const peakAfter = whatIfResult.simulated.peak?.count ?? 0
+                      const peakDelta = peakAfter - peakBefore
+                      const peakDeltaPct = peakBefore>0 ? Math.round((peakDelta/peakBefore)*100) : 0
+                      const clsColor = (d:number) => d>0 ? 'bg-[var(--c-danger,#dc2626)]/20 text-[var(--c-danger,#dc2626)]' : d<0 ? 'bg-[var(--c-success,#059669)]/20 text-[var(--c-success,#059669)]' : 'bg-[var(--c-border)]/40 text-[var(--c-text-secondary)]'
+                      const neutral = 'bg-[var(--c-surface-alt)] text-[var(--c-text-secondary)]'
+                      const added = whatIfResult.additional
+                      const chainW1 = whatIfResult.chainWeek1Added
+                      const expFails = whatIfResult.expectedFailuresWeek1
+                      const againRate = whatIfResult.againRateSampled
+                      const peakWithFails = whatIfResult.expectedPeakWithFailures
+                      const peakWithFailsDelta = (peakWithFails ?? peakAfter) - peakAfter
+                      const tl = whatIfResult.timeLoad
+                      const peakMinBefore = tl?.peakTimeMinutesOriginal
+                      const peakMinAfter = tl?.peakTimeMinutesSimulated
+                      const peakMinDelta = (peakMinAfter ?? 0) - (peakMinBefore ?? 0)
+                      const w1MinBefore = tl?.week1TotalMinutesOriginal
+                      const w1MinAfter = tl?.week1TotalMinutesSimulated
+                      const w1MinDelta = (w1MinAfter ?? 0) - (w1MinBefore ?? 0)
+                      const badge = (label:string, value:React.ReactNode, extra?:React.ReactNode, cls?:string, title?:string) => (
+                        <div key={label} className={`px-2 py-1 rounded-md border text-[10px] font-medium flex items-center gap-1 ${cls||''}`} title={typeof title==='string'? title: undefined}>
+                          <span className="opacity-70 font-normal">{label}</span>
+                          <span className="tabular-nums">{value}</span>
+                          {extra}
+                        </div>
+                      )
+                      const badges: React.ReactNode[] = []
+                      badges.push(badge('Added', '+'+added))
+                      badges.push(badge('Peak', peakBefore+'→'+peakAfter, peakDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakDelta>0?'+':''}{peakDelta} ({peakDeltaPct}%)</span>, clsColor(peakDelta)))
+                      if (peakMinAfter!==undefined && peakMinBefore!==undefined) {
+                        badges.push(badge('Peak Min', peakMinBefore+'→'+peakMinAfter, peakMinDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakMinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakMinDelta>0?'+':''}{peakMinDelta}</span>, clsColor(peakMinDelta)))
+                      }
+                      if (w1MinAfter!==undefined && w1MinBefore!==undefined) {
+                        badges.push(badge('W1 Min', w1MinBefore+'→'+w1MinAfter, w1MinDelta!==0 && <span className={`ml-0.5 text-[9px] ${w1MinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{w1MinDelta>0?'+':''}{w1MinDelta}</span>, clsColor(w1MinDelta)))
+                      }
+                      if (chainW1) badges.push(badge('W1+', chainW1, null, neutral, 'Week1 offset cards (<=D6)'))
+                      if (expFails!==undefined) badges.push(badge('Exp Again', expFails, againRate!=null && <span className="text-[8px] opacity-70">@{Math.round((againRate||0)*100)}%</span>, expFails>0? 'bg-[var(--c-warn,#d97706)]/20 text-[var(--c-warn,#d97706)]':'bg-[var(--c-border)]/40 text-[var(--c-text-secondary)]', 'Expected early Again count (Week1)'))
+                      if (peakWithFails!==undefined && peakWithFails !== peakAfter) {
+                        badges.push(badge('Peak(+fails)', peakAfter+'→'+peakWithFails, peakWithFailsDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakWithFailsDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakWithFailsDelta>0?'+':''}{peakWithFailsDelta}</span>, clsColor(peakWithFailsDelta)))
+                      }
+                      return <div className="flex flex-wrap gap-2" role="list">{badges.map((b,i)=>(<div key={i} role="listitem">{b}</div>))}</div>
+                    })()}
+                    <div className="mt-1 text-[8px] text-[var(--c-text-muted)] leading-snug flex flex-wrap gap-x-4 gap-y-1">
+                      <span>色: 赤=負荷増 / 緑=負荷減 / 灰=変化小</span>
+                      <span>Peak Min=ピーク日の推定所要分</span>
+                      {whatIfResult.timeLoad?.usedFallback && <span>Time Load: fallback median</span>}
+                    </div>
+                  </div>
+                )}
                 <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
                   {/* Left column */}
                   <div className="flex flex-col gap-6">
                     <div className="space-y-2">
                       <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">追加新カード数
-                        <input type="number" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=>{
+                        <input type="number" aria-label="追加新カード数入力" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=>{
                           const v = parseInt(e.target.value,10); if (!Number.isNaN(v)) setWhatIfN(Math.max(0, Math.min(200, v)))
                         }} className="w-24 rounded border bg-transparent px-2 py-1 text-[12px]" />
-                        <input type="range" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=> setWhatIfN(parseInt(e.target.value,10))} className="flex-1" />
-                        <select value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]">
+                        <input type="range" aria-label="追加新カード数スライダー" value={whatIfN} min={0} max={Math.max(10, (adaptiveDetail?.final||5)*2)} onChange={e=> setWhatIfN(parseInt(e.target.value,10))} className="flex-1" />
+                        <select aria-label="デッキ選択" value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]">
                           <option value="ALL">All Decks</option>
                           {upcomingLoadExt?.decks?.map(d=> (
                             <option key={d.deckId} value={d.deckId}>{d.deckId}</option>
@@ -1073,7 +1130,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="flex items-center gap-2 pt-1">
                         <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
-                          <input type="checkbox" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
+                          <input type="checkbox" aria-label="Chained モード切替" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
                           <span>Chained ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
                           {whatIfChained && (
                             <div className="ml-2 flex items-center gap-1 flex-wrap">
@@ -1123,8 +1180,10 @@ export default function ProfilePage() {
                           <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
                           <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
                           {whatIfResult.expectedPeakWithFailures !== undefined && (
-                            <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2">Early Failures
+                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseEarly(c=>!c)} aria-expanded={!collapseEarly} aria-controls="wf-early">
+                                <span>Early Failures</span>
+                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseEarly? 'Expand Early Failures':'Collapse Early Failures'}>{collapseEarly? '+':'−'}</button>
                                 {whatIfResult.againRateSampled !== undefined && (
                                   <span className="text-[8px] font-normal text-[var(--c-text-muted)]">
                                     Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%
@@ -1133,25 +1192,66 @@ export default function ProfilePage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
-                                <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
-                                  <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
-                                )}</span>
+                              {!collapseEarly && (
+                                <>
+                                  <div id="wf-early" className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
+                                    <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
+                                      <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
+                                    )}</span>
+                                  </div>
+                                  <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          {whatIfResult.timeLoad && (
+                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseTime(c=>!c)} aria-expanded={!collapseTime} aria-controls="wf-time">
+                                <span>Time Load</span>
+                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseTime? 'Expand Time Load':'Collapse Time Load'}>{collapseTime? '+':'−'}</button>
+                                <span className="text-[8px] font-normal text-[var(--c-text-muted)]">
+                                  per-card {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (fallback)'} n={whatIfResult.timeLoad.sampleSize}
+                                </span>
                               </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                              {!collapseTime && (
+                                <>
+                                  <div id="wf-time" className="flex flex-wrap gap-x-4 gap-y-1">
+                                    <span>Peak Min <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
+                                      <span className={whatIfResult.timeLoad.peakTimeDeltaMinutes>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.timeLoad.peakTimeDeltaMinutes>0?'+':''}{whatIfResult.timeLoad.peakTimeDeltaMinutes})</span>
+                                    )}</span>
+                                    {whatIfResult.timeLoad.week1TotalMinutesSimulated !== undefined && (
+                                      <span>W1 Total <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap gap-1 text-[8px] items-center">
+                                    {whatIfResult.timeLoad.simulatedMinutesPerDay.map((m,i)=>(
+                                      <span key={i} className="px-1 py-0.5 rounded bg-[var(--c-surface-alt)]/60 border">
+                                        D{i}:{m}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="text-[8px] text-[var(--c-text-muted)]">Median秒 * 件数 / 60 を 0.1 分丸め。早期失敗増も反映。</div>
+                                </>
+                              )}
                             </div>
                           )}
                           {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
-                            <div className="mt-2 rounded border px-2 py-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
-                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2">Chain Summary
+                            <div className="mt-2 rounded border px-2 pt-1 pb-1 text-[10px] leading-snug bg-[var(--c-surface-alt)]/40">
+                              <div className="font-medium text-[var(--c-text-secondary)] mb-0.5 flex items-center gap-2 cursor-pointer select-none" onClick={()=> setCollapseChain(c=>!c)} aria-expanded={!collapseChain} aria-controls="wf-chain">
+                                <span>Chain Summary</span>
+                                <button className="ml-auto text-[8px] px-1 py-0.5 rounded border bg-[var(--c-surface)]" aria-label={collapseChain? 'Expand Chain Summary':'Collapse Chain Summary'}>{collapseChain? '+':'−'}</button>
                                 <span className="text-[8px] font-normal text-[var(--c-text-muted)]">({CHAIN_PRESETS[chainPreset].join('/')})</span>
                               </div>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
-                                {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
-                              </div>
-                              <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
+                              {!collapseChain && (
+                                <>
+                                  <div id="wf-chain" className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
+                                    {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
+                                  </div>
+                                  <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1184,7 +1284,7 @@ export default function ProfilePage() {
                   <div className="flex flex-col gap-5">
                     <div>
                       <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{horizon}d Bars (シミュレーション差分)</div>
-                      <div className="flex h-24 sm:h-28 items-end gap-1">
+                      <div className="flex h-24 sm:h-28 items-end gap-1" role="img" aria-label="日次レビュー件数のBefore/After比較バー">
                         {whatIfResult.simulated.days.map((d,i)=>{
                           const before = whatIfResult.original.days[i]?.count || 0
                           const after = d.count
@@ -1212,6 +1312,37 @@ export default function ProfilePage() {
                         })}
                       </div>
                       <div className="mt-1 text-[9px] text-[var(--c-text-secondary)]">淡色=Before, 濃色=After, +数値=追加分</div>
+                      {/* Mini Sparklines (Before vs After counts) */}
+                      <div className="mt-3 space-y-1" aria-label="スパークライン比較" role="group">
+                        {(() => {
+                          const beforeCounts = whatIfResult.original.days.map(d=> d.count)
+                          const afterCounts = whatIfResult.simulated.days.map(d=> d.count)
+                          const peak = Math.max(1, ...beforeCounts, ...afterCounts)
+                          const Row = ({label, data, color, bg}:{label:string; data:number[]; color:string; bg:string}) => (
+                            <div className="flex items-center gap-2" aria-label={`${label} sparkline`}>
+                              <span className="w-10 text-[8px] font-medium text-[var(--c-text-secondary)]">{label}</span>
+                              <div className="flex flex-1 h-4 gap-[2px]">
+                                {data.map((v,i)=>{
+                                  const h = (v/peak)
+                                  const barH = Math.max(2, Math.round(h*16))
+                                  return (
+                                    <div key={i} className="flex-1 relative rounded-sm overflow-hidden" style={{background:bg}} title={`D${i}: ${v}`}>
+                                      {v>0 && <div className="absolute bottom-0 left-0 w-full" style={{height:barH, background:color}} />}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                          return (
+                            <div className="rounded-md border p-2 bg-[var(--c-surface-alt)]/30" aria-label="Before/After sparkline comparison">
+                              <Row label="Before" data={beforeCounts} color="var(--c-border)" bg="var(--c-border)/20" />
+                              <Row label="After" data={afterCounts} color="var(--c-accent)" bg="var(--c-border)/20" />
+                              <div className="mt-1 text-[7px] text-[var(--c-text-muted)]">Compact sparkline: height = count/peak * 16px (min2). 0件はフラット。</div>
+                            </div>
+                          )
+                        })()}
+                      </div>
                     </div>
                     {whatIfResult.deckChainImpact && (
                       <div className="rounded-lg border p-3 text-[10px] space-y-1">
