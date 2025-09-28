@@ -852,6 +852,18 @@ export interface WhatIfResult {
     deckWeek1TotalBefore?: number
     deckWeek1TotalAfter?: number
   }
+  // Phase 1.27 (optional) early interval chain distribution for the newly introduced cards.
+  // Example: [{dayOffset:1, added:10}, {dayOffset:3, added:7}, {dayOffset:7, added:5}]
+  chainDistribution?: { dayOffset: number; added: number }[]
+  // Deck-level chained impact (mirrors deckImpact but includes day3/day7) when deckId provided
+  deckChainImpact?: {
+    deckId: string
+    day1Before: number; day1After: number
+    day3Before: number; day3After: number
+    day7Before: number; day7After: number
+    deckPeakBefore: number; deckPeakAfter: number
+    deckWeek1TotalBefore?: number; deckWeek1TotalAfter?: number
+  }
 }
 
 // Simulate introducing `additional` new cards today (they first reappear tomorrow) and compute impact on 7-day (or horizon) load.
@@ -878,7 +890,7 @@ export function simulateNewCardsImpact(additional: number, horizonDays = 7, now 
   const counts = simulatedDays.map(d => d.count)
   // Recompute derived metrics
   let peak: { date: string; count: number } | null = null
-  counts.forEach((c,i)=>{ if (peak === null || c > peak.count) peak = { date: simulatedDays[i].date, count: c } })
+  counts.forEach((c,i)=>{ const currentPeakCount = peak ? peak.count : -Infinity; if (peak === null || c > currentPeakCount) peak = { date: simulatedDays[i].date, count: c } })
   const sorted = [...counts].sort((a,b)=>a-b)
   const medianRaw = sorted.length ? (sorted.length%2? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2) : 0
   const median = Math.round(medianRaw*100)/100
@@ -931,5 +943,83 @@ export function simulateNewCardsImpactWithDeck(additional: number, deckId: strin
       if (deckCountsAfter.length >= 2) w1After = w1Before + additional
     }
     return { ...base, deckImpact: { deckId, day1Before, day1After, deckPeakBefore, deckPeakAfter, deckWeek1TotalBefore: w1Before, deckWeek1TotalAfter: w1After } }
+  } catch { return base }
+}
+
+// Phase 1.27: Chained simulation approximating early intervals (Day1/3/7) for new cards.
+// Assumptions:
+//  - All new cards have 3 early reviews scheduled at offsets 1,3,7 (typical conservative pattern)
+//  - If additional < 0 -> treated as 0
+//  - Horizon shorter than a dayOffset simply ignores that bucket
+//  - Deck variant: assumes all additional belong to specified deckId
+//  - Does not alter backlog; counts add exactly once per offset (no lapses)
+export function simulateNewCardsImpactChained(additional: number, horizonDays = 7, now = Date.now()): WhatIfResult {
+  if (additional < 0) additional = 0
+  const original = getUpcomingReviewLoad(horizonDays, now)
+  if (additional === 0) {
+    return { additional, original, simulated: original, deltas: { peak:0, median:0, peakIncreasePct:0, classificationChanged:false }, chainDistribution: [] }
+  }
+  const chain = [1,3,7]
+  const distribution = chain.filter(d=> d < horizonDays).map(dayOffset => ({ dayOffset, added: additional }))
+  // Clone days & apply additions
+  const simulatedDays: UpcomingLoadDay[] = original.days.map((d,i)=>{
+    const dayOffset = i // index 0 is today; we only add on matching offsets
+    const dist = distribution.find(r=> r.dayOffset === dayOffset)
+    if (dist) return { ...d, count: d.count + dist.added }
+    return { ...d }
+  })
+  const counts = simulatedDays.map(d=>d.count)
+  let peak: { date: string; count: number } | null = null
+  counts.forEach((c,i)=>{ if (peak === null || c > peak.count) peak = { date: simulatedDays[i].date, count: c } })
+  const sorted = [...counts].sort((a,b)=>a-b)
+  const medianRaw = sorted.length ? (sorted.length%2? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2) : 0
+  const median = Math.round(medianRaw*100)/100
+  const avg = counts.length ? counts.reduce((a,b)=>a+b,0)/counts.length : 0
+  let classification: 'low' | 'medium' | 'high'
+  const peakCount = peak ? (peak as { date: string; count: number }).count : 0
+  if (peakCount >= 15 || avg >= 10) classification = 'high'
+  else if (peakCount >= 8 || avg >= 5) classification = 'medium'
+  else classification = 'low'
+  const today = original.today
+  const backlog = today.backlog
+  const total = counts.reduce((a,b)=>a+b,0) + backlog
+  const simulated: UpcomingLoadSummary = { days: simulatedDays, total, peak, median, classification, today }
+  const deltaPeak = (simulated.peak?.count || 0) - (original.peak?.count || 0)
+  const deltaMedian = simulated.median - original.median
+  const peakIncreasePct = (original.peak && original.peak.count > 0) ? (deltaPeak / original.peak.count) : 0
+  return {
+    additional,
+    original,
+    simulated,
+    deltas: { peak: deltaPeak, median: parseFloat(deltaMedian.toFixed(2)), peakIncreasePct: parseFloat((peakIncreasePct*100).toFixed(2)), classificationChanged: original.classification !== simulated.classification },
+    chainDistribution: distribution
+  }
+}
+
+export function simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizonDays=7, now=Date.now()): WhatIfResult {
+  const base = simulateNewCardsImpactChained(additional, horizonDays, now)
+  try {
+    const ext = getUpcomingReviewLoadExtended(horizonDays, now)
+    const target = ext.decks?.find(d=> d.deckId === deckId)
+    if (!target) return base
+    const offsets = [1,3,7]
+    const safe = (i:number)=> target.counts[i] || 0
+    const day1Before = safe(1); const day3Before = safe(3); const day7Before = safe(7)
+    const day1After = day1Before + (offsets.includes(1)? additional:0)
+    const day3After = day3Before + (offsets.includes(3)? additional:0)
+    const day7After = day7Before + (offsets.includes(7)? additional:0)
+    const deckCountsAfter = target.counts.map((c,i)=> offsets.includes(i)? c + additional : c)
+    const deckPeakBefore = Math.max(...target.counts)
+    const deckPeakAfter = Math.max(...deckCountsAfter)
+    const w1Before = target.w1?.total
+    let w1After: number | undefined = w1Before
+    if (typeof w1Before === 'number') {
+      // day1 (1) and day3 (3) within week1 window; day7 outside
+      let addW1 = 0
+      if (target.counts.length > 1) addW1 += additional
+      if (target.counts.length > 3) addW1 += additional
+      w1After = w1Before + addW1
+    }
+    return { ...base, deckChainImpact: { deckId, day1Before, day1After, day3Before, day3After, day7Before, day7After, deckPeakBefore, deckPeakAfter, deckWeek1TotalBefore: w1Before, deckWeek1TotalAfter: w1After } }
   } catch { return base }
 }

@@ -5,7 +5,7 @@ import { usePoints } from '../points-context'
 import Avatar from '@/components/avatar'
 import { getStatsForToday, TodayStats, getStreak, StreakInfo, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyReactionTimes, getDailyDeckReactionTimes } from '@/lib/episodes'
 import { DECKS } from '@/lib/decks'
-import { getReviewStats, ReviewStats, getReviewPerformance, ReviewPerformance, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck } from '@/lib/reviews'
+import { getReviewStats, ReviewStats, getReviewPerformance, ReviewPerformance, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck } from '@/lib/reviews'
 import ActivityHeatmap from '@/components/activity-heatmap'
 
 
@@ -73,10 +73,24 @@ export default function ProfilePage() {
   const [showWhatIf, setShowWhatIf] = React.useState(false)
   const [whatIfN, setWhatIfN] = React.useState(0)
   const [whatIfResult, setWhatIfResult] = React.useState<WhatIfResult | null>(null)
+  const [whatIfChained, setWhatIfChained] = React.useState(false) // Phase 1.27 toggle
   const [applying, setApplying] = React.useState(false)
   // Quality Trend card local data (moved out of What-if modal). If reintroduced, re-enable below.
   // const [perfRows, setPerfRows] = React.useState<ReturnType<typeof getRecentDailyPerformance>>([])
   const [whatIfDeck, setWhatIfDeck] = React.useState<string>('ALL')
+
+  // Recompute what-if when chained toggle changes (if modal open)
+  React.useEffect(()=>{
+    if (!showWhatIf) return
+    try {
+      if (whatIfChained) {
+        setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactChainedWithDeck(whatIfN, whatIfDeck, horizon): simulateNewCardsImpactChained(whatIfN, horizon))
+      } else {
+        setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactWithDeck(whatIfN, whatIfDeck, horizon): simulateNewCardsImpact(whatIfN, horizon))
+      }
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatIfChained])
 
   // Deck選択 永続化ロード
   React.useEffect(()=>{
@@ -751,7 +765,14 @@ export default function ProfilePage() {
               <span>Median {upcomingLoad.median}</span>
               <span>Today {upcomingLoad.today.projected}</span>
               <button
-                onClick={()=>{ setShowWhatIf(true); setWhatIfN(0); try{ setWhatIfResult(whatIfDeck!=='ALL'? simulateNewCardsImpactWithDeck(0, whatIfDeck, horizon): simulateNewCardsImpact(0, horizon)) }catch{} }}
+                onClick={()=>{ setShowWhatIf(true); setWhatIfN(0); try{ setWhatIfResult(()=>{
+                  if (whatIfChained) {
+                    if (whatIfDeck !== 'ALL') return simulateNewCardsImpactChainedWithDeck(0, whatIfDeck, horizon)
+                    return simulateNewCardsImpactChained(0, horizon)
+                  } else {
+                    return whatIfDeck!=='ALL'? simulateNewCardsImpactWithDeck(0, whatIfDeck, horizon): simulateNewCardsImpact(0, horizon)
+                  }
+                }) }catch{} }}
                 className="ml-2 rounded-md border px-2 py-1 text-[10px] font-medium hover:bg-[var(--c-surface-alt)]"
                 title={`追加新カード導入時の${horizon}日レビュー負荷影響を試算`}
               >What-if</button>
@@ -1029,7 +1050,20 @@ export default function ProfilePage() {
                           ))}
                         </select>
                       </label>
-                      <div className="text-[10px] text-[var(--c-text-muted)] leading-snug">仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。Deck 指定時もシミュレーション差分は全体集計 (Phase 1)。</div>
+                      <div className="text-[10px] text-[var(--c-text-muted)] leading-snug">
+                        {whatIfChained ? '仮定: Day1/3/7 の3点で初期再出現 (固定間隔近似)。失敗/ズレ未考慮。W1合計は Day1+3 を加算 (Day7 は W2 対象)。' : '仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。'}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
+                          <input type="checkbox" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
+                          <span>Chained (1/3/7)</span>
+                        </label>
+                        {whatIfResult.chainDistribution && (
+                          <div className="text-[9px] text-[var(--c-text-muted)]">
+                            Dist: {whatIfResult.chainDistribution.map(c=>`D${c.dayOffset}:${c.added}`).join(', ')}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg border p-3">
@@ -1106,7 +1140,20 @@ export default function ProfilePage() {
                       </div>
                       <div className="mt-1 text-[9px] text-[var(--c-text-secondary)]">淡色=Before, 濃色=After, +数値=追加分</div>
                     </div>
-                    {whatIfResult.deckImpact && (
+                    {whatIfResult.deckChainImpact && (
+                      <div className="rounded-lg border p-3 text-[10px] space-y-1">
+                        <div className="text-[9px] font-semibold text-[var(--c-text-secondary)] mb-1">Deck Chain Impact ({whatIfResult.deckChainImpact.deckId})</div>
+                        <div>Day1: {whatIfResult.deckChainImpact.day1Before} → {whatIfResult.deckChainImpact.day1After}</div>
+                        <div>Day3: {whatIfResult.deckChainImpact.day3Before} → {whatIfResult.deckChainImpact.day3After}</div>
+                        <div>Day7: {whatIfResult.deckChainImpact.day7Before} → {whatIfResult.deckChainImpact.day7After}</div>
+                        <div>Deck Peak: {whatIfResult.deckChainImpact.deckPeakBefore} → {whatIfResult.deckChainImpact.deckPeakAfter}</div>
+                        {whatIfResult.deckChainImpact.deckWeek1TotalBefore!=null && (
+                          <div>W1 Total: {whatIfResult.deckChainImpact.deckWeek1TotalBefore} → {whatIfResult.deckChainImpact.deckWeek1TotalAfter}</div>
+                        )}
+                        <div className="text-[8px] text-[var(--c-text-muted)]">簡易チェーンモデル (固定 1/3/7)。将来: 個別安定性ベース動的化。</div>
+                      </div>
+                    )}
+                    {!whatIfResult.deckChainImpact && whatIfResult.deckImpact && !whatIfChained && (
                       <div className="rounded-lg border p-3 text-[10px] space-y-1">
                         <div className="text-[9px] font-semibold text-[var(--c-text-secondary)] mb-1">Deck Impact ({whatIfResult.deckImpact.deckId})</div>
                         <div>Day1: {whatIfResult.deckImpact.day1Before} → {whatIfResult.deckImpact.day1After}</div>
