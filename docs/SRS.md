@@ -356,6 +356,77 @@ UI 変更:
 - additional=0 時 deckImpact day1After==day1Before。
 - Peak 再計算: Day1 増分が元ピーク未満なら deckPeakAfter は変化なし。
 
+### Chained What-if Simulation (Early Interval Approx) (Phase 1.27)
+
+目的: Day1 単発モデルでは過小評価される初期再出現負荷を簡易チェーン (Day1 / Day3 / Day7) 近似で可視化し、新カード導入が Week1+序盤 (Week2 開始) に与える影響をより現実的に判断する。
+
+背景: 多くの SRS (SM-2 系 / FSRS 推奨ステップ) は最初の 1 週間に複数回の短間隔レビュー (例: 1d→3d→7d) を挟む。従来の Phase 1.23/1.26 モデル (Day1 のみ) は 2 回目・3 回目レビューによる中期ピークを無視していた。
+
+スコープ (v1):
+- 固定オフセット {1,3,7} に同一枚数をそのまま加算 (確率分岐なし)
+- Horizon=7 の場合 Day7 は除外 (14d 拡張前提)
+- Deck 指定時は追加枚数すべてが選択デッキに属すると仮定し Day1/3/7 の比較を提示
+- Backlog 不変 (新カード nextDue >= 今日00:00)
+
+追加 API:
+```ts
+simulateNewCardsImpactChained(additional: number, horizonDays=7): WhatIfResult
+simulateNewCardsImpactChainedWithDeck(additional: number, deckId: string, horizonDays=7): WhatIfResult
+```
+
+`WhatIfResult` 拡張:
+- `chainDistribution: { dayOffset:number; added:number }[]`
+- `deckChainImpact`: Day1/3/7 / Peak / Week1 Total の Before/After
+
+アルゴリズム要点:
+1. original = getUpcomingReviewLoad(h)
+2. 有効オフセット集合 O = {o ∈ {1,3,7} | o < h}
+3. days[o].count += additional (各 o に 1 回)
+4. counts から Peak / Median / classification 再計算 (閾値既存流用)
+5. chainDistribution = O を dayOffset 昇順で列挙
+6. Deck 版: `getUpcomingReviewLoadExtended` で対象デッキ counts を同様に補正し Day1/3/7/Peak/W1 再算出
+
+UI (Profile What-if モーダル):
+- `Chained (1/3/7)` チェックボックスで切替 (デフォルト: OFF)
+- 有効時 Dist: D1:10, D3:10 … の簡易タグ表示
+- Deck 指定 + Chained ON: `Deck Chain Impact` ボックス表示 (単発版 deckImpact を置換)
+- Chained OFF: 従来 Day1 のみ加算モデル (後方互換)
+
+解釈ガイド:
+- Peak が単発モデルより顕著 (≥+10%) → 導入の分割 / 翌日抑制検討
+- Week1 Total 増分 (Day1+3) が過去7日平均レビュー数を超える → 近い将来負荷上振れリスク
+- day3After ≈ day1After * 0.6–0.8: 連続集中的再出現 → 休憩スケジューリング余地確認
+
+既知制約 / 簡略化:
+- 失敗 (Again) 再注入確率 0 扱い (実負荷より低め)
+- 個別 difficulty/stability 非利用 → 一律 1/3/7
+- Day7 を horizon=7 でカバーしない (14d 対応後に表示)
+- Week1 Total は Day1/3 のみ追加 (Day7 は Week2)
+
+将来拡張 (案):
+1. 14d チェーン対応 (Day7 影響 / Week2 指標連動)
+2. AgainRate 推定による期待値 E[reviews] = Σ( deterministics + failures ) 近似
+3. FSRS baseline (stability) から初期間隔サンプリング (log / exp 分布)
+4. Deck 複数配分最適化 (flatten/backlogRatio/peakShift 最小化)
+5. シナリオ比較パネル (Single vs Chained vs Probabilistic)
+
+テスト観点:
+- additional=0 → chainDistribution=[] / deltas=0
+- horizon=7 で day7 不在 / horizon>=8 で出現
+- deckChainImpact.day7Before==day7After (horizon<8)
+- チェーン ON/OFF 切替で original.* が変化しない (派生のみ更新)
+
+リスク / 注意:
+- 固定分布のため極端に易/難カードで過大/過小評価
+- 7d モードは第2週頭 (Day7) の負荷を未表示 → 14d 切替周知必要
+- 大量追加 (≥300) でも O(days) 処理だが将来確率分岐拡張時コスト増懸念
+
+撤退条件:
+- 利用率低 / 誤解多数 → Advanced オプション化
+- 実測 vs 予測 Day3/7 差異が継続高 (>30%) → 分布学習型へ移行
+
+関連コード: `reviews.ts#simulateNewCardsImpactChained*`, Profile What-if モーダル toggle。
+
 ```ts
 export type ReviewLog = {
   id: string
