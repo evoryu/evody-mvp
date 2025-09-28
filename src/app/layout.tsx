@@ -7,6 +7,8 @@ import Avatar from '@/components/avatar'
 import { PointsBadge } from '@/components/points-badge'
 import { PointsProvider } from './points-context'
 import { ToastProvider } from './toast-context'
+import { LocaleProvider } from './locale-context'
+import LocaleToggle from '@/components/locale-toggle'
 
 const notoSansJP = Noto_Sans_JP({
   weight: ['400', '500', '700'],
@@ -39,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="color-scheme" content="light" />
       </head>
   <body className="min-h-dvh bg-[var(--c-bg)] text-[15px] antialiased">
+        <LocaleProvider>
         <PointsProvider>
           <ToastProvider>
             {/* ヘッダー */}
@@ -62,6 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
                 
                 <div className="flex items-center gap-3">
+                  <LocaleToggle />
                   <PointsBadge />
                   <Link href="/profile" className="group relative cursor-pointer">
                     <Avatar size="sm" />
@@ -103,6 +107,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </footer>
           </ToastProvider>
         </PointsProvider>
+        </LocaleProvider>
       </body>
     </html>
   )
