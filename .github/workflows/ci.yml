@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx eslint .
+
+      - name: Badge validate (no generate drift)
+        run: |
+          npm run validate:badges
+
+      - name: Generate badges & check diff
+        run: |
+          npm run generate:badges
+          git diff --exit-code || (echo "❌ Generated badge registry not committed." && exit 1)
+
+      - name: Label parity
+        run: node scripts/check-label-parity.ts
+
+      - name: Summary
+        run: echo "All checks passed."

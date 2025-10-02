@@ -1,0 +1,11 @@
+{
+  "id": "backlog_cutter",
+  "category": "backlog",
+  "title": { "ja": "Backlog削減", "en": "Backlog Cutter" },
+  "description": { "ja": "Backlogを前回比で10以上削減", "en": "Reduce backlog by 10 vs previous" },
+  "conditions": [
+    { "type": "backlog_drop", "op": ">=", "value": 10 }
+  ],
+  "version": 1,
+  "tags": ["backlog"]
+}

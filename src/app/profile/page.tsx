@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { InfoHint } from '@/components/info-hint'
+import { classifyLoadTone, getLabel } from '@/lib/labels'
+import { useLocale } from '../locale-context'
 // Removed inline What-if UI pieces; dialog encapsulates KPI badges & sections.
 import { WhatIfDialog } from '@/components/whatif-dialog'
 import { usePoints } from '../points-context'
@@ -253,13 +256,15 @@ export default function ProfilePage() {
 
   const hasMounted = useHasMounted()
 
+  const locale = useLocale()
   return (
     <section className="space-y-6">
+      {/* locale: {locale} (debug hidden via CSS if desired) */}
       <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
       {focusAlert && (
         <div className="relative overflow-hidden rounded-xl border border-[var(--c-warn,#d97706)]/50 bg-[var(--c-warn,#d97706)]/10 px-4 py-3 text-[13px] leading-relaxed group" data-focus-alert="1">
           <strong className="mr-2 text-[var(--c-warn,#d97706)]">Focus Alert:</strong>
-          <span>{focusAlert} <span className="underline cursor-help text-[11px] opacity-80 group-hover:opacity-100" title="Baseline比較: p50>=+25% & Ret<=-4pt または TI>=1.6/ +5% over baseline">(詳細)</span></span>
+          <span>{focusAlert} <span className="underline cursor-help text-[11px] opacity-80 group-hover:opacity-100" title={getLabel('tooltipFocusBaseline', locale)}>(詳細)</span></span>
           <button
             onClick={()=>{ try{ localStorage.setItem('evody:focusAlert:'+ new Date().toISOString().slice(0,10), '1')}catch{}; setFocusAlert(null) }}
             className="absolute right-2 top-2 rounded-md px-2 py-0.5 text-[11px] border bg-[var(--c-surface)] hover:bg-[var(--c-surface-alt)]"
@@ -308,12 +313,12 @@ export default function ProfilePage() {
         <div className="task-card rounded-xl border p-4 shadow-sm">
           <h2 className="text-lg font-semibold flex items-center gap-3">学習ステータス
             <span className="ml-auto inline-flex items-center gap-2">
-              <select value={retentionMode} onChange={e=>{ const v=e.target.value as RetentionWeightMode; setRetentionMode(v); try{localStorage.setItem('evody:profile:retWeight', v)}catch{} }} className="rounded-md border bg-transparent px-2 py-1 text-[11px] focus:outline-none" title="Retention Weight Mode">
+              <select value={retentionMode} onChange={e=>{ const v=e.target.value as RetentionWeightMode; setRetentionMode(v); try{localStorage.setItem('evody:profile:retWeight', v)}catch{} }} className="rounded-md border bg-transparent px-2 py-1 text-[11px] focus:outline-none" title={getLabel('tooltipRetentionMode', locale)}>
                 <option value="effective">Eff</option>
                 <option value="cards">Cards</option>
                 <option value="goodEasy">G+E</option>
               </select>
-              <select value={selectedDeck} onChange={e=>{ const v=e.target.value; setSelectedDeck(v); try{localStorage.setItem('evody:profile:selectedDeck', v)}catch{} }} className="rounded-md border bg-transparent px-2 py-1 text-[11px] focus:outline-none" title="Deck別 Retention トレンド (保存されます)">
+              <select value={selectedDeck} onChange={e=>{ const v=e.target.value; setSelectedDeck(v); try{localStorage.setItem('evody:profile:selectedDeck', v)}catch{} }} className="rounded-md border bg-transparent px-2 py-1 text-[11px] focus:outline-none" title={getLabel('tooltipDeckRetentionSelect', locale)}>
                 <option value="">All Decks</option>
                 {DECKS.map(d=> <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
@@ -494,14 +499,14 @@ export default function ProfilePage() {
             <button
               onClick={reset}
               className="btn-secondary flex-1"
-              title="ポイントを0に戻します"
+              title={getLabel('tooltipResetPoints')}
             >
               ポイントをリセット
             </button>
             <button
               onClick={resetDaily}
               className="btn-secondary flex-1"
-              title="今日の達成数・連続記録をクリア（テスト用）"
+              title={getLabel('tooltipClearToday')}
             >
               連続記録をリセット
             </button>
@@ -537,33 +542,33 @@ export default function ProfilePage() {
       {upcomingLoad && (
         <div className="mt-10 rounded-xl border p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold flex items-center gap-2">Upcoming Review Load ({horizon}d)
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${upcomingLoad.classification==='high'?
-                'bg-[var(--c-danger,#dc2626)]/15 text-[var(--c-danger,#dc2626)]': upcomingLoad.classification==='medium'?
-                'bg-[var(--c-warn,#d97706)]/20 text-[var(--c-warn,#d97706)]':'bg-[var(--c-success)]/15 text-[var(--c-success)]'}`}>{upcomingLoad.classification}</span>
+            <h2 className="text-sm font-semibold flex items-center gap-2">{getLabel('upcomingLoadTitle', locale)} ({horizon}日)
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${classifyLoadTone(upcomingLoad.classification)}`}
+                title={`分類 = ${upcomingLoad.classification}`}
+              >{upcomingLoad.classification==='high'?'高': upcomingLoad.classification==='medium'?'中':'低'}</span>
               {horizon===14 && upcomingLoadExt?.secondWeekWarning && (
-                <span title="Second Week Warning: 2週目に負荷集中傾向 (Peak Shift or Balance Ratio)" className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[var(--c-warn,#d97706)]/20 text-[var(--c-warn,#d97706)] text-[10px] font-bold">!</span>
+                <span title={getLabel('secondWeekWarningIconTitle', locale)} className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[var(--c-warn,#d97706)]/20 text-[var(--c-warn,#d97706)] text-[10px] font-bold">!</span>
               )}
             </h2>
             <div className="text-[10px] text-[var(--c-text-secondary)] flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <button
                   onClick={()=>{ setHorizon(7); try{localStorage.setItem('evody:profile:loadHorizon','7')}catch{} }}
-                  className={`px-2 py-0.5 rounded text-[10px] border ${horizon===7?'bg-[var(--c-surface-alt)] font-semibold':''}`}>7d</button>
+                  className={`px-2 py-0.5 rounded text-[10px] border ${horizon===7?'bg-[var(--c-surface-alt)] font-semibold':''}`}>7日</button>
                 <button
                   onClick={()=>{ setHorizon(14); try{localStorage.setItem('evody:profile:loadHorizon','14')}catch{} }}
-                  className={`px-2 py-0.5 rounded text-[10px] border ${horizon===14?'bg-[var(--c-surface-alt)] font-semibold':''}`}>14d</button>
+                  className={`px-2 py-0.5 rounded text-[10px] border ${horizon===14?'bg-[var(--c-surface-alt)] font-semibold':''}`}>14日</button>
               </div>
               {horizon===14 && upcomingLoadExt?.decks && upcomingLoadExt.decks.length>0 && (
                 <button
                   onClick={()=>{ const v=!deckStack14; setDeckStack14(v); try{localStorage.setItem('evody:profile:deckStack14', v?'1':'0')}catch{} }}
                   className={`px-2 py-0.5 rounded text-[10px] border ${deckStack14?'bg-[var(--c-surface-alt)] font-semibold':''}`}
-                  title="デッキ別スタック表示トグル"
-                >Stack</button>
+                  title={getLabel('tooltipDeckBreakdownToggle')}
+                >内訳</button>
               )}
-              <span>Peak {upcomingLoad.peak?.count ?? 0}</span>
-              <span>Median {upcomingLoad.median}</span>
-              <span>Today {upcomingLoad.today.projected}</span>
+              <span>最大/日 (Peak) {upcomingLoad.peak?.count ?? 0}</span>
+              <span>中央値/日 {upcomingLoad.median}</span>
+              <span>今日 {upcomingLoad.today.projected}</span>
               <button
                 onClick={()=>{ setShowWhatIf(true); setWhatIfN(0); try{ setWhatIfResult(()=>{
                   if (whatIfChained) {
@@ -575,8 +580,14 @@ export default function ProfilePage() {
                 }) }catch{} }}
                 className="ml-2 rounded-md border px-2 py-1 text-[10px] font-medium hover:bg-[var(--c-surface-alt)]"
                 title={`追加新カード導入時の${horizon}日レビュー負荷影響を試算`}
-              >What-if</button>
+              >{getLabel('simulatorShort')}</button>
             </div>
+          </div>
+          <div className="mb-2 flex flex-wrap gap-3 text-[8px] text-[var(--c-text-muted)]">
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[var(--c-danger,#dc2626)]/70" />高: 負荷が高め (再挑戦増や追加抑制検討)</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[var(--c-warn,#d97706)]/70" />中: 一部日で集中 (調整余地)</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[var(--c-success)]/70" />低: 余裕あり</span>
+              <span className="flex items-center gap-1" title={getLabel('tooltipBacklog', locale)}><span className="inline-block h-2 w-2 rounded-sm bg-[var(--c-danger,#dc2626)]" />{getLabel('backlogLegend', locale)}</span>
           </div>
           {(() => {
             const showStack = horizon===14 && deckStack14 && upcomingLoadExt?.decks && upcomingLoadExt.decks.length>0
@@ -625,7 +636,7 @@ export default function ProfilePage() {
             const peakBase = upcomingLoad.peak?.count || 1
             const peakWithBacklog = Math.max(peakBase, ...dayTotals)
             return (
-              <div className="flex h-16 items-end gap-1" title="Deck stacked breakdown (14d)">
+              <div className="flex h-16 items-end gap-1" title={getLabel('tooltipDeckStacked14d')}>
                 {upcomingLoad.days.map((d,i)=>{
                   const total = dayTotals[i]
                   const isToday = i===0
@@ -679,21 +690,21 @@ export default function ProfilePage() {
                 const name = DECKS.find(dd=>dd.id===d.deckId)?.name || d.deckId
                 return <span key={d.deckId} className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{background:color}} />{name}</span>
               })}
-              {upcomingLoad.today.backlog>0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[var(--c-danger,#dc2626)]" />Backlog</span>}
+              {upcomingLoad.today.backlog>0 && <span className="inline-flex items-center gap-1" title={getLabel('tooltipBacklog', locale)}><span className="h-2 w-2 rounded-sm bg-[var(--c-danger,#dc2626)]" />{getLabel('backlogLegend', locale)}</span>}
               <button
                 onClick={()=>{ const v=!deckStack14; setDeckStack14(v); try{localStorage.setItem('evody:profile:deckStack14', v?'1':'0')}catch{} }}
                 className={`ml-auto px-2 py-0.5 rounded text-[10px] border ${deckStack14?'bg-[var(--c-surface-alt)] font-semibold':''}`}
-              >Raw</button>
+              >{getLabel('rawToggleLabel', locale)}</button>
             </div>
           )}
           {upcomingLoad.today.backlog>10 && (
-            <div className="mt-2 text-[11px] text-[var(--c-danger,#dc2626)] font-medium">Backlog が多めです ({upcomingLoad.today.backlog}). 先に既存レビュー消化を推奨。</div>
+            <div className="mt-2 text-[11px] text-[var(--c-danger,#dc2626)] font-medium">{getLabel('backlogWarning', locale)} ({upcomingLoad.today.backlog}). 先に既存レビュー消化を推奨。</div>
           )}
           {horizon===14 && upcomingLoadExt && (
             <div className="mt-3 grid gap-2 text-[10px] sm:grid-cols-3">
-              <div className="rounded border p-2 flex flex-col gap-0.5" title="Week1: 最初の7日間の予定レビュー負荷 (当日含む)。Peak=最大日件数, Total=合計件数。"><span className="text-[var(--c-text-secondary)] font-semibold">Week1</span><span>Peak {upcomingLoadExt.week1.peak}</span><span>Total {upcomingLoadExt.week1.total}</span></div>
+              <div className="rounded border p-2 flex flex-col gap-0.5" title={getLabel('tooltipWeek1Card', locale)}><span className="text-[var(--c-text-secondary)] font-semibold">1週目</span><span>最大/日 {upcomingLoadExt.week1.peak}</span><span>合計 {upcomingLoadExt.week1.total}</span></div>
               {upcomingLoadExt.week2 && (
-                <div className="rounded border p-2 flex flex-col gap-0.5" title="Week2: 8〜14日目の予定レビュー。Week1 との比較で集中/偏りを把握。"><span className="text-[var(--c-text-secondary)] font-semibold">Week2</span><span>Peak {upcomingLoadExt.week2.peak}</span><span>Total {upcomingLoadExt.week2.total}</span></div>
+                <div className="rounded border p-2 flex flex-col gap-0.5" title={getLabel('tooltipWeek2Card', locale)}><span className="text-[var(--c-text-secondary)] font-semibold">2週目</span><span>最大/日 {upcomingLoadExt.week2.peak}</span><span>合計 {upcomingLoadExt.week2.total}</span></div>
               )}
                         {(() => {
                           const ratio = upcomingLoadExt.loadBalanceRatio
@@ -711,10 +722,10 @@ export default function ProfilePage() {
                             else shiftCls = 'text-[var(--c-danger,#dc2626)]'
                           }
                           return (
-                            <div className="rounded border p-2 flex flex-col gap-0.5" title="Balance: Peak Shift= (Week2Peak - Week1Peak)。W2/W1 = Week2Total / Week1Total。2週目偏重や負荷移動を検出。">
-                              <span className="text-[var(--c-text-secondary)] font-semibold">Balance</span>
-                              <span className={`flex items-center gap-1 ${shiftCls}`}>Shift {shift!=null? shift: '--'}</span>
-                              <span className={ratioCls}>W2/W1 {ratio!=null? ratio: '--'}</span>
+                            <div className="rounded border p-2 flex flex-col gap-0.5" title={getLabel('tooltipBalanceMetric', locale)}>
+                              <span className="text-[var(--c-text-secondary)] font-semibold">{getLabel('balanceCardTitle', locale)}</span>
+                              <span className={`flex items-center gap-1 ${shiftCls}`}>{getLabel('shiftLabel', locale)} {shift!=null? shift: '--'}</span>
+                              <span className={ratioCls}>{getLabel('balanceLabelShort', locale)} {ratio!=null? ratio: '--'}</span>
                             </div>
                           )
                         })()}
@@ -727,17 +738,17 @@ export default function ProfilePage() {
                             else fiCls = 'text-[var(--c-danger,#dc2626)]'
                           }
                           return (
-                            <div className="rounded border p-2 flex flex-col gap-0.5" title="Shape: Flatten = globalPeak / top3Avg (上位3日の平均と比較し尖り具合を測定)。値が1に近いほど平準化。Top3Avg=上位3日平均。">
-                              <span className="text-[var(--c-text-secondary)] font-semibold">Shape</span>
-                              <span className={fiCls}>Flatten {fi!=null? fi: '--'}</span>
+                            <div className="rounded border p-2 flex flex-col gap-0.5" title={getLabel('infoShapeMetric', locale)}>
+                              <span className="text-[var(--c-text-secondary)] font-semibold flex items-center gap-1">Shape <InfoHint labelKey="infoShapeMetric" portal tail iconSize={10} /></span>
+                              <span className={fiCls}>{getLabel('flattenLabelShort', locale)} {fi!=null? fi: '--'}</span>
                               <span>Top3Avg {upcomingLoadExt.top3Avg!=null? Math.round(upcomingLoadExt.top3Avg): '--'}</span>
                             </div>
                           )
                         })()}
               {upcomingLoadExt.secondWeekWarning && (
-                <div className="rounded border p-2 flex flex-col gap-1 sm:col-span-2 bg-[var(--c-warn,#d97706)]/10 border-[var(--c-warn,#d97706)]/50" title="Second Week Warning: Week2ピークが Week1 を大きく超過 (>=1.25x かつ >=8) か W2/W1 >=1.4 の場合。">
-                  <span className="font-semibold text-[var(--c-warn,#d97706)]">Second Week Warning</span>
-                  <span className="leading-snug">2週目に負荷集中の兆候があります (Peak Shift または Balance Ratio)。新カード導入ペースを少し抑えるか既存レビュー優先を検討。</span>
+                <div className="rounded border p-2 flex flex-col gap-1 sm:col-span-2 bg-[var(--c-warn,#d97706)]/10 border-[var(--c-warn,#d97706)]/50" title={getLabel('infoSecondWeekWarning', locale)}>
+                  <span className="font-semibold text-[var(--c-warn,#d97706)] flex items-center gap-1">{getLabel('secondWeekWarningTitle', locale)} <InfoHint labelKey="infoSecondWeekWarning" portal tail iconSize={10} /></span>
+                  <span className="leading-snug">{getLabel('secondWeekWarningBody', locale)}</span>
                 </div>
               )}
             </div>
@@ -745,21 +756,56 @@ export default function ProfilePage() {
           {horizon===14 && upcomingLoadExt?.decks && upcomingLoadExt.decks.length>0 && (
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[10px] font-semibold tracking-wide text-[var(--c-text-secondary)]">Deck Week Metrics (Top)</span>
-                <span className="text-[9px] text-[var(--c-text-muted)]" title="並び: w2 Peak desc -> w1 Peak desc">sorted</span>
+                <span className="text-[10px] font-semibold tracking-wide text-[var(--c-text-secondary)]">{getLabel('deckWeekMetricsTitle', locale)}</span>
+                <span className="text-[9px] text-[var(--c-text-muted)]" title={getLabel('tooltipDeckSortOrder', locale)}>sorted</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border border-[var(--c-border)]/60 rounded-sm min-w-[420px]">
                   <thead className="bg-[var(--c-surface-alt)]/40">
                     <tr className="text-[9px] text-left">
                       <th className="px-2 py-1 font-medium">Deck</th>
-                      <th className="px-2 py-1 font-medium" title="Week1 Peak / Total">W1 P/T</th>
-                      <th className="px-2 py-1 font-medium" title="Week2 Peak / Total">W2 P/T</th>
-                      <th className="px-2 py-1 font-medium" title="Shift = W2Peak - W1Peak">Shift</th>
-                      <th className="px-2 py-1 font-medium" title="Balance = W2Total / W1Total">Balance</th>
-                      <th className="px-2 py-1 font-medium" title="Flatten = deckPeak / top3Avg (デッキ内尖り) 1に近いほど平準化">Flat</th>
-                      <th className="px-2 py-1 font-medium" title="Backlog">Bkg</th>
-                      <th className="px-2 py-1 font-medium" title="Backlog Ratio = backlog / (backlog + future counts). 高いほど滞留">Bkg%</th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableW1PT', locale)}
+                          <InfoHint labelKey={'infoDeckW1PT'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableW2PT', locale)}
+                          <InfoHint labelKey={'infoDeckW2PT'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableShift', locale)}
+                          <InfoHint labelKey={'infoDeckShift'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableBalance', locale)}
+                          <InfoHint labelKey={'infoDeckBalance'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableFlat', locale)}
+                          <InfoHint labelKey={'infoDeckFlat'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableBacklog', locale)}
+                          <InfoHint labelKey={'infoDeckBacklog'} placement="bottom" />
+                        </div>
+                      </th>
+                      <th className="px-2 py-1 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          {getLabel('deckTableBacklogPct', locale)}
+                          <InfoHint labelKey={'infoDeckBacklogPct'} placement="bottom" />
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -807,7 +853,7 @@ export default function ProfilePage() {
                             <td className={`px-2 py-1 tabular-nums ${shiftCls}`}>{shift!=null? shift: '--'}</td>
                             <td className={`px-2 py-1 tabular-nums ${balCls}`}>{balance!=null? balance: '--'}</td>
                             <td className={`px-2 py-1 tabular-nums ${flatCls}`}>{flat!=null? flat: '--'}</td>
-                            <td className="px-2 py-1 tabular-nums" title="Backlog">{d.backlog>0? d.backlog: ''}</td>
+                            <td className="px-2 py-1 tabular-nums" title={getLabel('deckTableBacklog', locale)}>{d.backlog>0? d.backlog: ''}</td>
                             <td className={`px-2 py-1 tabular-nums ${bkrCls}`}>{typeof bkr==='number'? (bkr*100).toFixed(0)+'%': '--'}</td>
                           </tr>
                         )
@@ -815,12 +861,12 @@ export default function ProfilePage() {
                     })()}
                   </tbody>
                 </table>
-                <div className="mt-1 text-[8px] text-[var(--c-text-muted)]">W1/2: 7日単位ミニ指標 (Peak/Total)。Shift=W2Peak-W1Peak, Balance=W2Total/W1Total, Flat=deckPeak/top3Avg (1に近いほど尖り小)。Bkg% = backlog / (backlog + future) (≥40% 赤 / ≥25% 黄 / 他 緑)。</div>
+                <div className="mt-1 text-[8px] text-[var(--c-text-muted)]">{getLabel('deckMetricsFooter', locale)}</div>
               </div>
             </div>
           )}
           <div className="mt-2 text-[10px] text-[var(--c-text-secondary)] leading-relaxed">
-            Peak は期間内最大日次予定レビュー数、Median は日次件数の中央値。赤=期限超過(backlog)、濃色=これから到来予定。Today=本日残+backlog。バー高さは Peak 基準。{horizon===14 && ' 14d では Week1/Week2 のピーク/合計と平準化指標(Flatten, Balance)・2週目集中警告を表示。What-if は 7d 前提。'}
+            {getLabel('upcomingLoadFooter', locale)}{horizon===14 && ' 14d では Week1/Week2 のピーク/合計と平準化指標(Flatten, Balance)・2週目集中警告を表示。What-if は 7d 前提。'}
           </div>
         </div>
       )}

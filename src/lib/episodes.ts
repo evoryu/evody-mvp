@@ -178,6 +178,11 @@ export function getStreak(now: number = safeNow()): StreakInfo {
   return { current, longest, lastActive: dates[0] || null }
 }
 
+// Convenience: current streak days only (badges evaluation用)
+export function getCurrentStreakDays(now: number = safeNow()): number {
+  return getStreak(now).current
+}
+
 // --- Daily Activity (for heatmap) ---
 export type DayActivity = { date: string; episodes: number; cards: number; points: number }
 

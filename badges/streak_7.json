@@ -1,0 +1,13 @@
+{
+  "id": "streak_7",
+  "category": "streak",
+  "title": { "ja": "7日連続学習", "en": "7-Day Streak" },
+  "description": { "ja": "7日連続で学習を記録", "en": "Log study 7 consecutive days" },
+  "conditions": [
+    { "type": "streak_days", "op": ">=", "value": 7 }
+  ],
+  "tier": 1,
+  "repeatable": false,
+  "version": 1,
+  "tags": ["streak", "onboarding"]
+}

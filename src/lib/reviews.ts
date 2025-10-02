@@ -22,6 +22,7 @@ export type ReviewLog = {
 const KEY = 'evody:review_logs'
 const STATE_KEY = 'evody:review_state' // per-card state (interval,ease,nextDue)
 const INTRO_KEY = 'evody:new_cards' // tracking introduction (date -> cardIds introduced)
+const BACKLOG_SNAPSHOT_KEY = 'evody:backlog_prev'
 
 export type CardState = { cardId: string; interval: number; ease: number; nextDue: number; difficulty?: number; stability?: number; deckId?: string }
 
@@ -91,6 +92,26 @@ function saveIntro(map: Record<string, string[]>) {
   try { localStorage.setItem(INTRO_KEY, JSON.stringify(map)) } catch {}
 }
 
+// --- Backlog Snapshot (MVP) -------------------------------------------------
+// backlog 定義 (暫定): nextDue <= now のカード件数。
+// previous: 前回 snapshot を localStorage に保持し差分系バッジ/backlog_drop 用に利用。
+
+export interface BacklogSnapshot { current: number; previous: number | null; capturedAt: number }
+
+export function getBacklogSnapshot(now = Date.now()): BacklogSnapshot {
+  if (typeof window === 'undefined') return { current: 0, previous: null, capturedAt: now }
+  const state = loadState()
+  const due = Object.values(state).filter(s => s.nextDue <= now).length
+  let prev: BacklogSnapshot | null = null
+  try {
+    const raw = localStorage.getItem(BACKLOG_SNAPSHOT_KEY)
+    if (raw) prev = JSON.parse(raw) as BacklogSnapshot
+  } catch { /* ignore */ }
+  const snapshot: BacklogSnapshot = { current: due, previous: prev?.current ?? null, capturedAt: now }
+  try { localStorage.setItem(BACKLOG_SNAPSHOT_KEY, JSON.stringify(snapshot)) } catch {}
+  return snapshot
+}
+
 // ---- Recent Daily Performance Helper (rolling retention / again trend) ----
 export interface DailyPerformanceRow { date: string; total: number; again: number; hard: number; good: number; easy: number; retention: number | null; againRate: number | null }
 export function getRecentDailyPerformance(days = 14, now = Date.now()): DailyPerformanceRow[] {
@@ -130,6 +151,92 @@ export function getRecentDailyPerformance(days = 14, now = Date.now()): DailyPer
     }
   }
   return rows
+}
+
+// Rolling retention over N days (Good+Easy)/(total-Again) aggregated.
+export function getRollingRetention(days = 7, now = Date.now()): { days: number; retention: number | null; sample: number } {
+  if (typeof window === 'undefined' || days <= 0) return { days, retention: null, sample: 0 }
+  const rows = getRecentDailyPerformance(days, now)
+  let again=0, good=0, easy=0, total=0
+  for (const r of rows) {
+    again += r.again
+    good += r.good
+    easy += r.easy
+    total += r.total
+  }
+  if (total === 0) return { days, retention: null, sample: 0 }
+  const denom = total - again
+  const retention = denom>0 ? (good + easy) / denom : 0
+  return { days, retention, sample: total }
+}
+
+export function getRetention7d30d(now = Date.now()): { r7d: { retention: number | null; sample: number }; r30d: { retention: number | null; sample: number } } {
+  const r7 = getRollingRetention(7, now)
+  const r30 = getRollingRetention(30, now)
+  return { r7d: { retention: r7.retention, sample: r7.sample }, r30d: { retention: r30.retention, sample: r30.sample } }
+}
+
+// ---------------- Data Export / Import (MVP) ----------------
+export interface StudyDataExport {
+  exportedAt: string
+  reviewLogs: ReviewLog[]
+  state: Record<string, CardState>
+  intro: Record<string, string[]>
+  version: 1
+}
+
+export function exportStudyData(): StudyDataExport {
+  // Access underlying loaders to avoid sorting overhead except where helpful
+  const reviewLogs = getReviewLogs() // sorted desc
+  // Reuse private loaders (duplicated minimal to keep export stable)
+  function rawState(): Record<string, CardState> {
+    try { const raw = localStorage.getItem(STATE_KEY); return raw? JSON.parse(raw): {} } catch { return {} }
+  }
+  function rawIntro(): Record<string, string[]> {
+    try { const raw = localStorage.getItem(INTRO_KEY); return raw? JSON.parse(raw): {} } catch { return {} }
+  }
+  return {
+    exportedAt: new Date().toISOString(),
+    reviewLogs,
+    state: rawState(),
+    intro: rawIntro(),
+    version: 1,
+  }
+}
+
+export function importStudyData(payload: StudyDataExport, { merge = false }: { merge?: boolean } = {}): { imported: number; skipped: number } {
+  if (typeof window === 'undefined') return { imported: 0, skipped: 0 }
+  if (!payload || payload.version !== 1) return { imported: 0, skipped: 0 }
+  const existing = loadLogs()
+  const existingIds = new Set(existing.map(l=> l.id))
+  const imported: ReviewLog[] = []
+  for (const log of payload.reviewLogs) {
+    if (!merge || !existingIds.has(log.id)) {
+      imported.push(log)
+    }
+  }
+  const combined = merge ? [...existing, ...imported] : [...imported]
+  saveLogs(combined)
+  if (!merge) {
+    try { localStorage.setItem(STATE_KEY, JSON.stringify(payload.state)) } catch {}
+    try { localStorage.setItem(INTRO_KEY, JSON.stringify(payload.intro)) } catch {}
+  } else {
+    // merge states (favor existing to avoid sudden schedule jumps)
+    try {
+      const raw = localStorage.getItem(STATE_KEY)
+      const cur = raw? JSON.parse(raw): {}
+      const mergedState = { ...payload.state, ...cur }
+      localStorage.setItem(STATE_KEY, JSON.stringify(mergedState))
+    } catch {}
+    try {
+      const raw = localStorage.getItem(INTRO_KEY)
+      const cur = raw? JSON.parse(raw): {}
+      const mergedIntro = { ...payload.intro, ...cur }
+      localStorage.setItem(INTRO_KEY, JSON.stringify(mergedIntro))
+    } catch {}
+  }
+  try { window.dispatchEvent(new CustomEvent('evody:reviews:imported', { detail: { imported: imported.length } })) } catch {}
+  return { imported: imported.length, skipped: payload.reviewLogs.length - imported.length }
 }
 
 // Initial defaults

@@ -1,10 +1,14 @@
 import React from 'react'
 import { WhatIfResult, CHAIN_PRESETS, ChainPresetKey } from '@/lib/reviews'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 import { KpiBadge, decideDeltaTone } from '@/components/kpi-badge'
 import { CollapsibleSection } from '@/components/collapsible-section'
+import { InfoHint } from '@/components/info-hint'
 
 // Summary badges (moved from profile page)
 function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
+  const locale = useLocale()
   const peakBefore = whatIfResult.original.peak?.count ?? 0
   const peakAfter = whatIfResult.simulated.peak?.count ?? 0
   const peakDelta = peakAfter - peakBefore
@@ -24,11 +28,12 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
   const w1MinDelta = (w1MinAfter ?? 0) - (w1MinBefore ?? 0)
 
   const badges: React.ReactNode[] = []
-  badges.push(<KpiBadge key="added" label="Added" value={'+'+added} tone="neutral" />)
+  badges.push(<KpiBadge key="added" label={getLabel('addedCards', locale)} value={'+'+added} tone="neutral" />)
   badges.push(
     <KpiBadge
       key="peak"
-      label="Peak"
+  label={getLabel('peakPerDay', locale)}
+      title={getLabel('tooltipPeakPerDay', locale)}
       value={`${peakBefore}→${peakAfter}`}
       extra={peakDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakDelta>0?'+':''}{peakDelta} ({peakDeltaPct}%)</span>}
       tone={decideDeltaTone(peakDelta)}
@@ -38,7 +43,7 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
     badges.push(
       <KpiBadge
         key="peak-min"
-        label="Peak Min"
+  label={getLabel('peakMinutes', locale)}
         value={`${peakMinBefore}→${peakMinAfter}`}
         extra={peakMinDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakMinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakMinDelta>0?'+':''}{peakMinDelta}</span>}
         tone={decideDeltaTone(peakMinDelta)}
@@ -49,23 +54,23 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
     badges.push(
       <KpiBadge
         key="w1-min"
-        label="W1 Min"
+  label={getLabel('week1TotalMinutes', locale)}
         value={`${w1MinBefore}→${w1MinAfter}`}
         extra={w1MinDelta!==0 && <span className={`ml-0.5 text-[9px] ${w1MinDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{w1MinDelta>0?'+':''}{w1MinDelta}</span>}
         tone={decideDeltaTone(w1MinDelta)}
       />
     )
   }
-  if (chainW1) badges.push(<KpiBadge key="w1plus" label="W1+" value={chainW1} tone="neutral" title="Week1 offset cards (<=D6)" />)
+  if (chainW1) badges.push(<KpiBadge key="w1plus" label={getLabel('week1Added', locale)} value={chainW1} tone="neutral" title={getLabel('week1Added', locale)+': D offsets <=6'} />)
   if (expFails!==undefined) {
     badges.push(
       <KpiBadge
         key="exp-again"
-        label="Exp Again"
+  label={getLabel('expectedRetrys', locale)}
         value={expFails}
         extra={againRate!=null && <span className="text-[8px] opacity-70">@{Math.round((againRate||0)*100)}%</span>}
         tone={expFails>0? 'warn':'muted'}
-        title="Expected early Again count (Week1)"
+  title={getLabel('expectedRetrys', locale) + ' (Week1)'}
       />
     )
   }
@@ -73,7 +78,7 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
     badges.push(
       <KpiBadge
         key="peak-fails"
-        label="Peak(+fails)"
+  label={getLabel('peakWithRetry', locale)}
         value={`${peakAfter}→${peakWithFails}`}
         extra={peakWithFailsDelta!==0 && <span className={`ml-0.5 text-[9px] ${peakWithFailsDelta>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success,#059669)]'}`}>{peakWithFailsDelta>0?'+':''}{peakWithFailsDelta}</span>}
         tone={decideDeltaTone(peakWithFailsDelta)}
@@ -82,12 +87,12 @@ function WhatIfSummaryBadges({ whatIfResult }: { whatIfResult: WhatIfResult }) {
   }
 
   return (
-    <div className="mb-6" aria-label="What-if summary" role="group">
+  <div className="mb-6" aria-label={getLabel('simulatorShort', locale) + ' サマリー'} role="group">
       <div className="flex flex-wrap gap-2" role="list">{badges}</div>
       <div className="mt-1 text-[8px] text-[var(--c-text-muted)] leading-snug flex flex-wrap gap-x-4 gap-y-1">
-        <span>色: 赤=負荷増 / 緑=負荷減 / 灰=変化小</span>
-        <span>Peak Min=ピーク日の推定所要分</span>
-        {whatIfResult.timeLoad?.usedFallback && <span>Time Load: fallback median</span>}
+  <span>{getLabel('colorsLegend', locale)}</span>
+  <span>{getLabel('peakMinutes', locale)}={getLabel('peakMinutesHint', locale)}</span>
+  {whatIfResult.timeLoad?.usedFallback && <span>{getLabel('timeLoadFallback', locale)}</span>}
       </div>
     </div>
   )
@@ -130,17 +135,18 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
     applying, onApply
   } = props
 
+  const locale = useLocale()
   if (!open) return null
 
   const adaptive = adaptiveDetail || undefined
   const ext = upcomingLoadExt || undefined
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label="What-if シミュレーションモーダル">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label={getLabel('simulatorTitle', locale) + ' モーダル'}>
       <div className="w-full max-w-5xl h-[90vh] sm:h-[80vh] rounded-2xl border bg-[var(--c-surface)] shadow-xl text-sm flex flex-col" onClick={e=>e.stopPropagation()} tabIndex={-1}>
         <div className="px-6 pt-5 pb-3 flex items-start justify-between border-b gap-4" role="heading" aria-level={2}>
-          <h2 className="text-base font-semibold leading-snug" id="whatif-title">What-if: 新カード導入シミュレーション ({horizon}d)</h2>
-          <button onClick={onClose} className="rounded-md px-3 py-1 text-xs font-medium border hover:bg-[var(--c-surface-alt)]" aria-label="What-if 閉じる (ESC)" title="閉じる">閉じる</button>
+          <h2 className="text-base font-semibold leading-snug" id="whatif-title">{getLabel('simulatorTitle', locale)} ({horizon}日)</h2>
+          <button onClick={onClose} className="rounded-md px-3 py-1 text-xs font-medium border hover:bg-[var(--c-surface-alt)]" aria-label={getLabel('closeAction', locale)} title={getLabel('closeAction', locale)}>{getLabel('closeAction', locale)}</button>
         </div>
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
@@ -149,32 +155,32 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
               {/* Left column */}
               <div className="flex flex-col gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">追加新カード数
+                    <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">{getLabel('addedCardsCount', locale)}
                     <input type="number" aria-label="追加新カード数入力" value={whatIfN} min={0} max={Math.max(10, (adaptive?.final||5)*2)} onChange={e=>{
                       const v = parseInt(e.target.value,10); if (!Number.isNaN(v)) setWhatIfN(Math.max(0, Math.min(200, v)))
                     }} className="w-24 rounded border bg-transparent px-2 py-1 text-[12px]" />
                     <input type="range" aria-label="追加新カード数スライダー" value={whatIfN} min={0} max={Math.max(10, (adaptive?.final||5)*2)} onChange={e=> setWhatIfN(parseInt(e.target.value,10))} className="flex-1" />
                     <select aria-label="デッキ選択" value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]">
-                      <option value="ALL">All Decks</option>
+                      <option value="ALL">{getLabel('allDecks', locale)}</option>
                       {ext?.decks?.map((d: { deckId: string })=> (
                         <option key={d.deckId} value={d.deckId}>{d.deckId}</option>
                       ))}
                     </select>
                   </label>
                   <div className="text-[10px] text-[var(--c-text-muted)] leading-snug">
-                    {whatIfChained ? '仮定: プリセット初期間隔で初期再出現 (固定間隔近似)。失敗/ズレ未考慮。W1合計は Week1 内オフセット (<=6)。' : '仮定: Day1 のみ 1 回再出現 (初回復習)。失敗再注入未考慮。'}
+                    {whatIfChained ? getLabel('assumptionChained', locale) : getLabel('assumptionSingle', locale)}
                   </div>
                   <div className="flex items-center gap-2 pt-1">
                     <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
-                      <input type="checkbox" aria-label="Chained モード切替" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
-                      <span>Chained ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
+                      <input type="checkbox" aria-label="追加パターン (連続再出現) 切替" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
+                      <span>{getLabel('addPattern', locale)} ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
                       {whatIfChained && (
                         <div className="ml-2 flex items-center gap-1 flex-wrap">
                           <select
                             value={chainPreset}
                             onChange={e=> setChainPreset(e.target.value as ChainPresetKey)}
                             className="rounded-md border bg-transparent px-1 py-0.5 text-[10px]"
-                            title="初期再出現プリセット"
+                            title={getLabel('chainPresetTitle', locale)}
                           >
                             <option value="standard">Std 1/3/7</option>
                             <option value="fast">Fast 1/2/5</option>
@@ -194,66 +200,66 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                     </label>
                     {whatIfResult.chainDistribution && (
                       <div className="text-[9px] text-[var(--c-text-muted)]">
-                        Dist: {whatIfResult.chainDistribution.map(c=>`D${c.dayOffset}:${c.added}`).join(', ')}
+                        {getLabel('chainDistributionShort', locale)} {whatIfResult.chainDistribution.map(c=>`D${c.dayOffset}:${c.added}`).join(', ')}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border p-3">
-                    <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">Before</div>
+                    <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">{getLabel('beforeState', locale)}</div>
                     <div className="space-y-1 text-[11px]">
-                      <div>Peak <strong>{whatIfResult.original.peak?.count ?? 0}</strong></div>
-                      <div>Median <strong>{whatIfResult.original.median}</strong></div>
-                      <div>Class <strong className="capitalize">{whatIfResult.original.classification}</strong></div>
+                      <div>{getLabel('peakPerDay', locale)} <strong>{whatIfResult.original.peak?.count ?? 0}</strong></div>
+                      <div>{getLabel('medianPerDay', locale)} <strong>{whatIfResult.original.median}</strong></div>
+                      <div>{getLabel('classificationLabel', locale)} <strong className="capitalize">{whatIfResult.original.classification}</strong></div>
                     </div>
                   </div>
                   <div className="rounded-lg border p-3">
-                    <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">After (+{whatIfResult.additional})</div>
+                    <div className="text-[10px] font-semibold text-[var(--c-text-secondary)] mb-1">{getLabel('afterState', locale)} (+{whatIfResult.additional})</div>
                     <div className="space-y-1 text-[11px]">
-                      <div>Peak <strong>{whatIfResult.simulated.peak?.count ?? 0}</strong> {whatIfResult.deltas.peak!==0 && (<span className={whatIfResult.deltas.peak>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.peak>0?'+':''}{whatIfResult.deltas.peak})</span>)}</div>
-                      <div>Median <strong>{whatIfResult.simulated.median}</strong> {whatIfResult.deltas.median!==0 && (<span className={whatIfResult.deltas.median>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.median>0?'+':''}{whatIfResult.deltas.median})</span>)}</div>
-                      <div>Class <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
-                      <div>Peak Δ% <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
+                      <div>{getLabel('peakPerDay', locale)} <strong>{whatIfResult.simulated.peak?.count ?? 0}</strong> {whatIfResult.deltas.peak!==0 && (<span className={whatIfResult.deltas.peak>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.peak>0?'+':''}{whatIfResult.deltas.peak})</span>)}</div>
+                      <div>{getLabel('medianPerDay', locale)} <strong>{whatIfResult.simulated.median}</strong> {whatIfResult.deltas.median!==0 && (<span className={whatIfResult.deltas.median>0? 'text-[var(--c-danger,#dc2626)]':'text-[var(--c-success)]'}>({whatIfResult.deltas.median>0?'+':''}{whatIfResult.deltas.median})</span>)}</div>
+                      <div>{getLabel('classificationLabel', locale)} <strong className="capitalize">{whatIfResult.simulated.classification}</strong> {whatIfResult.deltas.classificationChanged && (<span className="ml-1 rounded bg-[var(--c-warn,#d97706)]/20 px-1">→</span>)}</div>
+                      <div>{getLabel('peakChangePct', locale)} <strong>{whatIfResult.deltas.peakIncreasePct}</strong></div>
                       {whatIfResult.expectedPeakWithFailures !== undefined && (
                         <CollapsibleSection
                           id="wf-early"
-                          title="Early Failures"
+                          title={<span className="inline-flex items-center gap-1">{getLabel('earlyRetry', locale)} <InfoHint labelKey="tooltipEarlyRetry" portal tail className="ml-0.5" iconSize={12} /></span>}
                           collapsed={collapseEarly}
                           onToggle={()=> setCollapseEarly(c=>!c)}
                           summary={whatIfResult.againRateSampled !== undefined && (
                             <>
-                              Rate: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%{whatIfResult.againRateFallbackUsed && ' (fallback)'}{typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
+                              {getLabel('retryRateShort', locale)}: {whatIfResult.againRateSampled===null? '—' : Math.round((whatIfResult.againRateSampled||0)*100)}%{whatIfResult.againRateFallbackUsed && ' (fallback)'}{typeof whatIfResult.againSampleSize === 'number' && <span> n={whatIfResult.againSampleSize}</span>}
                             </>
                           )}
                           small
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            {whatIfResult.expectedFailuresWeek1 !== undefined && <span>Expected W1 Again <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
-                            <span>Peak(+fails) <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
+                            {whatIfResult.expectedFailuresWeek1 !== undefined && <span>{getLabel('week1', locale)} {getLabel('expectedRetrys', locale)} <strong>{whatIfResult.expectedFailuresWeek1}</strong></span>}
+                            <span>{getLabel('peakWithRetry', locale)} <strong>{whatIfResult.expectedPeakWithFailures}</strong>{typeof whatIfResult.expectedPeakDelta==='number' && whatIfResult.expectedPeakDelta!==0 && (
                               <span className={whatIfResult.expectedPeakDelta>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.expectedPeakDelta>0?'+':''}{whatIfResult.expectedPeakDelta})</span>
                             )}</span>
                           </div>
-                          <div className="text-[8px] text-[var(--c-text-muted)]">簡易モデル: Week1 新規カード * Again率 (clamp 2%-55%)。全失敗は Day2 に集約。fallback=サンプル不足(min40)。</div>
+                          <div className="text-[8px] text-[var(--c-text-muted)]">{getLabel('earlyRetryNote', locale)}</div>
                         </CollapsibleSection>
                       )}
                       {whatIfResult.timeLoad && (
                         <CollapsibleSection
                           id="wf-time"
-                          title="Time Load"
+                          title={<span className="inline-flex items-center gap-1">{getLabel('timeLoad', locale)} <InfoHint labelKey="tooltipTimeLoad" portal tail className="ml-0.5" iconSize={12} /></span>}
                           collapsed={collapseTime}
                           onToggle={()=> setCollapseTime(c=>!c)}
                           summary={
-                            <>per-card {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (fallback)'} n={whatIfResult.timeLoad.sampleSize}</>
+                            <>{getLabel('minutesPerCardMedian', locale)} {whatIfResult.timeLoad.perCardMedianSec}s{whatIfResult.timeLoad.usedFallback && ' (暫定値)'} n={whatIfResult.timeLoad.sampleSize}</>
                           }
                           small
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            <span>Peak Min <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
+                            <span>{getLabel('peakMinutes', locale)} <strong>{whatIfResult.timeLoad.peakTimeMinutesSimulated}</strong>{whatIfResult.timeLoad.peakTimeDeltaMinutes!==0 && (
                               <span className={whatIfResult.timeLoad.peakTimeDeltaMinutes>0? 'text-[var(--c-danger,#dc2626)] ml-1':'text-[var(--c-success)] ml-1'}>({whatIfResult.timeLoad.peakTimeDeltaMinutes>0?'+':''}{whatIfResult.timeLoad.peakTimeDeltaMinutes})</span>
                             )}</span>
                             {whatIfResult.timeLoad.week1TotalMinutesSimulated !== undefined && (
-                              <span>W1 Total <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
+                              <span>{getLabel('week1TotalMinutes', locale)} <strong>{whatIfResult.timeLoad.week1TotalMinutesSimulated}</strong></span>
                             )}
                           </div>
                           <div className="mt-1 flex flex-wrap gap-1 text-[8px] items-center">
@@ -261,23 +267,23 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                               <span key={i} className="px-1 py-0.5 rounded bg-[var(--c-surface-alt)]/60 border">D{i}:{m}</span>
                             ))}
                           </div>
-                          <div className="text-[8px] text-[var(--c-text-muted)]">Median秒 * 件数 / 60 を 0.1 分丸め。早期失敗増も反映。</div>
+                          <div className="text-[8px] text-[var(--c-text-muted)]">{getLabel('timeLoadNote', locale)}</div>
                         </CollapsibleSection>
                       )}
                       {whatIfChained && horizon>=8 && (whatIfResult.chainWeek1Added || whatIfResult.chainWeek2Added) && (
                         <CollapsibleSection
                           id="wf-chain"
-                          title="Chain Summary"
+                          title={<span className="inline-flex items-center gap-1">{getLabel('chainSummary', locale)} <InfoHint labelKey="tooltipChainSummary" portal tail className="ml-0.5" iconSize={12} /></span>}
                           collapsed={collapseChain}
                           onToggle={()=> setCollapseChain(c=>!c)}
                           summary={<>( {CHAIN_PRESETS[chainPreset].join('/')})</>}
                           small
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            {whatIfResult.chainWeek1Added && <span>W1+ <strong>{whatIfResult.chainWeek1Added}</strong></span>}
-                            {whatIfResult.chainWeek2Added && horizon>=14 && <span>W2+ <strong>{whatIfResult.chainWeek2Added}</strong></span>}
+                            {whatIfResult.chainWeek1Added && <span>{getLabel('week1Added', locale)} <strong>{whatIfResult.chainWeek1Added}</strong></span>}
+                            {whatIfResult.chainWeek2Added && horizon>=14 && <span>{getLabel('week2Added', locale)} <strong>{whatIfResult.chainWeek2Added}</strong></span>}
                           </div>
-                          <div className="text-[8px] text-[var(--c-text-muted)]">W1+: Week1 内オフセット(≤6) 合計 / W2+: Week2 内 (7..13)。Unused(&gt;horizon) は除外。</div>
+                          <div className="text-[8px] text-[var(--c-text-muted)]">Week1内: Day0..6 オフセット合計 / Week2内: Day7..13。超過 (&gt;horizon) は除外。</div>
                         </CollapsibleSection>
                       )}
                     </div>
@@ -290,15 +296,15 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                       if (whatIfN<=0) return; onApply()
                     }}
                     className="rounded-md bg-[var(--c-accent)] text-[var(--c-text-inverse,#fff)] px-3 py-1 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-                    title="実際に新カードを導入 (今日の残り枠に従い、余剰は無視)"
-                  >Apply</button>
-                  <button onClick={onClose} className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-[var(--c-surface-alt)]">閉じる</button>
+                    title={getLabel('applyActionTitle', locale)}
+                  >{getLabel('applyAction', locale)}</button>
+                  <button onClick={onClose} className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-[var(--c-surface-alt)]">{getLabel('closeAction', locale)}</button>
                 </div>
               </div>
               {/* Right column */}
               <div className="flex flex-col gap-5">
                 <div>
-                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{horizon}d Bars (シミュレーション差分)</div>
+                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{horizon}d Bars ({getLabel('afterShort', locale)} diff)</div>
                   <div className="flex h-24 sm:h-28 items-end gap-1" role="img" aria-label="日次レビュー件数のBefore/After比較バー">
                     {whatIfResult.simulated.days.map((d,i)=>{
                       const before = whatIfResult.original.days[i]?.count || 0
@@ -322,14 +328,14 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                     })}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 items-center text-[8px] text-[var(--c-text-muted)]">
-                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]/35" />Before</span>
-                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]" />After</span>
-                    <span>数字=差分</span>
+                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]/35" />{getLabel('beforeShort', locale)}</span>
+                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]" />{getLabel('afterShort', locale)}</span>
+                    <span>{getLabel('deltaNumberLegend', locale)}</span>
                   </div>
                 </div>
                 {/* Sparkline */}
                 <div>
-                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">Sparkline (Before→After)</div>
+                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{getLabel('sparklineTitle', locale)}</div>
                   <div className="flex items-center gap-2" role="img" aria-label="ミニ折れ線差分">
                     {(() => {
                       const peak = Math.max(1, whatIfResult.simulated.peak?.count || 1)

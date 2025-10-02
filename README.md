@@ -11,7 +11,7 @@ Next.js 15 + App Router + TypeScript + Tailwind のMVP。
 - Quick Study: 1分クイズ（Reveal→Again/Hard/Good/Easy）でポイント付与
 - Decks: 一覧/詳細/学習ページ（ダミーデータ）
 - Dark Mode: `next-themes` による切替（ThemeToggle）
-- What-if シミュレーション: 新カード追加による 7d 先負荷 (Peak / Median) への影響を即時計算。Chain (1/3/7 等) モード・早期失敗 (Again) 簡易モデル・Time Load (推定所要分) を表示。
+- 学習量シミュレーター (旧: What-if): 新カード追加による 7日先負荷 (最大/日 (Peak) / 中央値) を即時計算。追加パターン (旧 Chain) モード・初期再挑戦 (旧 Again) 簡易モデル・学習時間 (旧 Time Load) を表示。
 
 ## 技術
 
@@ -19,19 +19,19 @@ Next.js 15 + App Router + TypeScript + Tailwind のMVP。
 - TailwindCSS / lucide-react / next-themes
 - 型: TypeScript
 
-## What-if / Time Load / 早期失敗モデル 概要 (Phase 1.30A)
+## 学習量シミュレーター / 学習時間 / 初期再挑戦モデル 概要 (旧: What-if / Time Load / Early Failures) (Phase 1.30A)
 
-Profile ページの「What-if」から追加新カード数を入力すると 7 日間のレビュー負荷変化をシミュレートします。
+Profile ページの「学習量シミュレーター (旧: What-if)」から追加カード数を入力すると 7 日間のレビュー負荷変化をシミュレートします。
 
 表示指標:
 
-- Peak / Median: 7 日内最大・中央値
-- Peak Δ%, Peak(+fails): 早期失敗 (Again) 再注入を考慮したピーク再計算（Day2 に集約）
-- Exp Again: Week1 新カード \* Again率 (2%〜55% clamp)。サンプル不足 (>=40 必要) 時 fallback rate 使用
-- Time Load: 直近反応時間サンプル (p95 除外) の中央値 \* 件数 / 60 を 0.1 分丸め。Peak Min / W1 Min / 日別分布
-- Chain Summary: 初期間隔プリセット (例 1/3/7) による Week1/2 再出現件数合計 (<= horizon 内)
+- 最大/日 (Peak) / 中央値/日: 7 日内最大・中央値
+- 最大/日 変化%・最大/日(+再): 初期再挑戦 (再挑戦率) 再注入を考慮した最大/日再計算（Day2 集約簡易モデル）
+- 再挑戦見込み: Week1 新カード \* 再挑戦率 (2%〜55% clamp)。サンプル不足 (>=40) 時 (暫定値) レート
+- 学習時間: 直近反応時間サンプル (p95 トリム) 中央値 \* 件数 / 60 を 0.1分丸め。最大/日(分) / 1週合計(分) / 日別分布
+- 追加パターンサマリー (旧 Chain): 初期間隔プリセット (例 1/3/7) による Week1/2 再出現件数合計 (<= horizon 内)
 
-バッジ色: 赤=負荷増 / 緑=負荷減 / 灰=変化小 / 黄=注意 (Again件数など)
+バッジ色: 赤=負荷増 / 緑=負荷減 / 灰=変化小 / 黄=注意 (再挑戦件数など)
 
 ## 検証スクリプト (what-if test)
 

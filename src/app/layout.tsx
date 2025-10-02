@@ -9,6 +9,8 @@ import { PointsProvider } from './points-context'
 import { ToastProvider } from './toast-context'
 import { LocaleProvider } from './locale-context'
 import LocaleToggle from '@/components/locale-toggle'
+import { BadgeRegistryLoader } from './badge-registry-loader'
+import { BadgesProvider } from './badges-context'
 
 const notoSansJP = Noto_Sans_JP({
   weight: ['400', '500', '700'],
@@ -44,6 +46,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <LocaleProvider>
         <PointsProvider>
           <ToastProvider>
+            <BadgesProvider>
+            <BadgeRegistryLoader />
             {/* ヘッダー */}
             <header className="sticky top-0 z-50 border-b border-[var(--c-border)] bg-[var(--c-surface)]/80 backdrop-blur">
               <nav className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-4">
@@ -105,6 +109,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </footer>
+            </BadgesProvider>
           </ToastProvider>
         </PointsProvider>
         </LocaleProvider>

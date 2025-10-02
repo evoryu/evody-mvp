@@ -1,0 +1,20 @@
+{
+  "id": "balanced_reaction",
+  "category": "reaction",
+  "title": { "ja": "反応バランス", "en": "Balanced Reaction" },
+  "description": {
+    "ja": "p50改善(>=12%) または TailIndex<=1.40 を満たし、Retention 7d >=80%",
+    "en": "Achieve either p50 improvement >=12% OR tail index <=1.40 with 7d retention >=80%"
+  },
+  "conditions": [
+    { "type": "retention_rate", "op": ">=", "value": 80 }
+  ],
+  "anyOf": [
+    [ { "type": "reaction_p50_improve", "op": ">=", "value": 0.12 } ],
+    [ { "type": "tail_index_low", "op": "<=", "value": 1.40 } ]
+  ],
+  "tier": 1,
+  "repeatable": false,
+  "version": 1,
+  "tags": ["reaction", "hybrid", "anyOf"]
+}

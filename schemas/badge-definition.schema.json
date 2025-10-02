@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://evody.local/schemas/badge-definition.schema.json",
+  "title": "BadgeDefinition",
+  "type": "object",
+  "required": ["id", "category", "title", "description", "conditions", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "category": { "type": "string" },
+    "title": {
+      "type": "object",
+      "required": ["ja"],
+      "additionalProperties": false,
+      "properties": {
+        "ja": { "type": "string", "minLength": 1 },
+        "en": { "type": "string" }
+      }
+    },
+    "description": {
+      "type": "object",
+      "required": ["ja"],
+      "additionalProperties": false,
+      "properties": {
+        "ja": { "type": "string", "minLength": 1 },
+        "en": { "type": "string" }
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/condition" },
+      "description": "All conditions in this array must be satisfied (AND). Use anyOf for OR logic."
+    },
+    "anyOf": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "#/definitions/condition" }
+      },
+      "description": "Array of OR groups. At least one inner group must have all its conditions satisfied."
+    },
+    "tier": { "type": "integer", "minimum": 1 },
+    "repeatable": { "type": "boolean" },
+    "version": { "type": "integer", "minimum": 1 },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    }
+  },
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "required": ["type", "op", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "streak_days",
+            "backlog_drop",
+            "reaction_p50_improve",
+            "tail_index_low",
+            "flatten_low",
+            "retention_rate",
+            "efficiency_score",
+            "episodes_total"
+          ]
+        },
+        "op": { "type": "string", "enum": [">=", ">", "<=", "<", "==", "diff>=", "pct>="] },
+        "value": { "type": "number" },
+        "windowDays": { "type": "integer", "minimum": 1 },
+        "deckScope": { "type": "string" }
+      }
+    }
+  }
+}
