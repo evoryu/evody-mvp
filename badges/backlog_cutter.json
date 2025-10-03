@@ -1,8 +1,8 @@
 {
   "id": "backlog_cutter",
   "category": "backlog",
-  "title": { "ja": "Backlog削減", "en": "Backlog Cutter" },
-  "description": { "ja": "Backlogを前回比で10以上削減", "en": "Reduce backlog by 10 vs previous" },
+  "title": { "ja": "未処理カード10件削減", "en": "Reduced Backlog by 10" },
+  "description": { "ja": "前回より未処理カード数を10件以上減らした", "en": "Reduced the number of pending cards by 10 compared to the previous snapshot" },
   "conditions": [
     { "type": "backlog_drop", "op": ">=", "value": 10 }
   ],

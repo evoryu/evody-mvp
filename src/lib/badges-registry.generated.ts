@@ -1,5 +1,5 @@
 // AUTO-GENERATED FILE. DO NOT EDIT.
-// Generated at 2025-10-02T14:30:44.151Z
+// Generated at 2025-10-03T05:06:32.779Z
 import type { BadgeDefinition } from './badges'
 
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
@@ -93,6 +93,86 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     "tags": [
       "reaction",
       "performance"
+    ]
+  },
+  {
+    "id": "retention_85",
+    "category": "retention",
+    "title": {
+      "ja": "堅実なリテンション",
+      "en": "Solid Retention"
+    },
+    "description": {
+      "ja": "7日リテンション率 (Good+Easy%) 85%以上を達成",
+      "en": "Achieve 7d retention (Good+Easy%) of 85% or higher"
+    },
+    "conditions": [
+      {
+        "type": "retention_rate",
+        "op": ">=",
+        "value": 85
+      }
+    ],
+    "tier": 1,
+    "repeatable": false,
+    "version": 1,
+    "tags": [
+      "retention",
+      "quality",
+      "tier"
+    ]
+  },
+  {
+    "id": "retention_95",
+    "category": "retention",
+    "title": {
+      "ja": "エリートリテンション",
+      "en": "Elite Retention"
+    },
+    "description": {
+      "ja": "7日リテンション率 (Good+Easy%) 95%以上を達成",
+      "en": "Achieve 7d retention (Good+Easy%) of 95% or higher"
+    },
+    "conditions": [
+      {
+        "type": "retention_rate",
+        "op": ">=",
+        "value": 95
+      }
+    ],
+    "tier": 3,
+    "repeatable": false,
+    "version": 1,
+    "tags": [
+      "retention",
+      "quality",
+      "tier"
+    ]
+  },
+  {
+    "id": "retention_high",
+    "category": "retention",
+    "title": {
+      "ja": "高リテンション",
+      "en": "High Retention"
+    },
+    "description": {
+      "ja": "7日リテンション率 (Good+Easy%) 90%以上を達成",
+      "en": "Achieve 7d retention (Good+Easy%) of 90% or higher"
+    },
+    "conditions": [
+      {
+        "type": "retention_rate",
+        "op": ">=",
+        "value": 90
+      }
+    ],
+    "tier": 2,
+    "repeatable": false,
+    "version": 1,
+    "tags": [
+      "retention",
+      "quality"
     ]
   },
   {

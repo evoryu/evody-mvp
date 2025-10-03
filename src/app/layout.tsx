@@ -65,6 +65,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     <Link href="/tasks" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
                       タスク
                     </Link>
+                    <Link href="/achievements" className="text-[var(--c-text-muted)] transition-colors hover:text-[var(--c-text)]">
+                      実績
+                    </Link>
                   </div>
                 </div>
                 

@@ -1,0 +1,13 @@
+// Aggregated badge-related tests
+import './badges.test'
+import './badge-progress.test'
+import './experiments.test'
+import './experiments.override.test'
+import './experiments.weights.test'
+import './experiments.analytics.test'
+import './experiments.conversion.test'
+import './experiments.analytics.persistence.test'
+import './experiments.analytics.force-success.test'
+import './experiments.analytics.clear.test'
+import './experiments.analytics.ttl.test'
+import './experiments.analytics.backoff.test'

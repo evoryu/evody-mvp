@@ -10,7 +10,8 @@ import { usePoints } from '../points-context'
 import Avatar from '@/components/avatar'
 import { getStatsForToday, TodayStats, listEpisodes, Episode, getDailyReviewRetention, DailyRetention, RetentionWeightMode, getDailyDeckReactionTimes } from '@/lib/episodes'
 import { DECKS } from '@/lib/decks'
-import { getReviewStats, ReviewStats, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck, CHAIN_PRESETS, ChainPresetKey } from '@/lib/reviews'
+import { getReviewStats, ReviewStats, getNewCardAvailability, getAdaptiveNewLimit, getUpcomingReviewLoad, UpcomingLoadSummary, simulateNewCardsImpact, WhatIfResult, introduceNewCards, getUpcomingReviewLoadExtended, simulateNewCardsImpactWithDeck, simulateNewCardsImpactChained, simulateNewCardsImpactChainedWithDeck, CHAIN_PRESETS, ChainPresetKey, exportStudyData, importStudyData } from '@/lib/reviews'
+import { useToast } from '../toast-context'
 import ActivityHeatmap from '@/components/activity-heatmap'
 
 
@@ -96,6 +97,12 @@ export default function ProfilePage() {
   // Quality Trend card local data (moved out of What-if modal). If reintroduced, re-enable below.
   // const [perfRows, setPerfRows] = React.useState<ReturnType<typeof getRecentDailyPerformance>>([])
   const [whatIfDeck, setWhatIfDeck] = React.useState<string>('ALL')
+  // Export / Import UI state
+  const [showImport, setShowImport] = React.useState(false)
+  const [importText, setImportText] = React.useState('')
+  const [mergeMode, setMergeMode] = React.useState(true) // true=merge, false=replace
+  const [importFeedback, setImportFeedback] = React.useState<string | null>(null)
+  const { showToast } = useToast()
 
   // Recompute what-if when chained toggle changes (if modal open)
   React.useEffect(()=>{
@@ -945,6 +952,86 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Data Export / Import (Study data) */}
+      <div className="mt-12 rounded-xl border p-4 shadow-sm space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">学習データバックアップ
+          <InfoHint labelKey="timeLoadNote" placement="right" portal tail iconSize={12} />
+        </h2>
+        <div className="text-[12px] text-[var(--c-text-secondary)] leading-relaxed">
+          ローカル保存中のレビュー履歴 / カード状態 / 新規導入履歴を JSON としてエクスポート・インポートできます。<br />
+          インポート時は Merge=既存優先で重複回避 / Replace=全置換。
+        </div>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <button
+            onClick={()=>{
+              try {
+                const data = exportStudyData()
+                const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' })
+                const a = document.createElement('a')
+                const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')
+                a.href = URL.createObjectURL(blob)
+                a.download = `evody-export-${stamp}.json`
+                document.body.appendChild(a)
+                a.click()
+                setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove() }, 0)
+                if (showToast) showToast('Export 完了')
+              } catch {
+                if (showToast) showToast('Export 失敗')
+              }
+            }}
+            className="rounded-md border px-3 py-1 font-medium hover:bg-[var(--c-surface-alt)]"
+          >Export</button>
+          <button
+            onClick={()=>{ setShowImport(s=>!s); setImportFeedback(null) }}
+            className="rounded-md border px-3 py-1 font-medium hover:bg-[var(--c-surface-alt)]"
+          >{showImport? 'Importを閉じる':'Import'}</button>
+          {showImport && (
+            <label className="ml-auto text-[11px] flex items-center gap-1 select-none cursor-pointer">
+              <input type="checkbox" checked={mergeMode} onChange={e=> setMergeMode(e.target.checked)} className="scale-90" />Merge (既存優先)
+            </label>
+          )}
+        </div>
+        {showImport && (
+          <div className="space-y-3">
+            <textarea
+              className="w-full rounded-md border bg-transparent p-2 text-[11px] font-mono h-40"
+              placeholder="貼り付け / JSON ドロップ"
+              value={importText}
+              onChange={e=> setImportText(e.target.value)}
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={e=>{
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  file.text().then(t=> setImportText(t)).catch(()=> setImportFeedback('ファイル読込失敗'))
+                }}
+                className="text-[11px]"
+              />
+              <button
+                onClick={()=>{
+                  try {
+                    const parsed = JSON.parse(importText)
+                    const res = importStudyData(parsed, { merge: mergeMode })
+                    setImportFeedback(`Imported ${res.imported}, Skipped ${res.skipped}`)
+                    if (showToast) showToast('Import 完了')
+                    window.dispatchEvent(new Event('evody:reviews:changed'))
+                  } catch(err) {
+                    setImportFeedback('Import 失敗: ' + (err instanceof Error? err.message: '不明なエラー'))
+                    if (showToast) showToast('Import 失敗')
+                  }
+                }}
+                disabled={!importText.trim()}
+                className="rounded-md border px-3 py-1 text-sm font-medium disabled:opacity-40 hover:bg-[var(--c-surface-alt)]"
+              >実行</button>
+              {importFeedback && <span className="text-[11px] text-[var(--c-text-secondary)]">{importFeedback}</span>}
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   )
 }

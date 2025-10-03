@@ -1,0 +1,13 @@
+{
+  "id": "retention_high",
+  "category": "retention",
+  "title": { "ja": "定着率90%達成", "en": "Retention ≥90%" },
+  "description": { "ja": "直近7日間の定着率が90%以上", "en": "7-day retention (Good+Easy%) reached 90% or higher" },
+  "conditions": [
+    { "type": "retention_rate", "op": ">=", "value": 90 }
+  ],
+  "tier": 2,
+  "repeatable": false,
+  "version": 1,
+  "tags": ["retention", "quality"]
+}

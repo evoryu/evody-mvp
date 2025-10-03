@@ -1,8 +1,8 @@
 {
   "id": "streak_7",
   "category": "streak",
-  "title": { "ja": "7日連続学習", "en": "7-Day Streak" },
-  "description": { "ja": "7日連続で学習を記録", "en": "Log study 7 consecutive days" },
+  "title": { "ja": "7日連続学習達成", "en": "7-Day Study Streak" },
+  "description": { "ja": "7日間、毎日学習記録を残した", "en": "Logged study activity every day for 7 straight days" },
   "conditions": [
     { "type": "streak_days", "op": ">=", "value": 7 }
   ],

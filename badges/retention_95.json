@@ -1,0 +1,11 @@
+{
+  "id": "retention_95",
+  "category": "retention",
+  "title": { "ja": "定着率95%達成", "en": "Retention ≥95%" },
+  "description": { "ja": "直近7日間の定着率が95%以上", "en": "7-day retention (Good+Easy%) reached 95% or higher" },
+  "conditions": [ { "type": "retention_rate", "op": ">=", "value": 95 } ],
+  "tier": 3,
+  "repeatable": false,
+  "version": 1,
+  "tags": ["retention", "quality", "tier"]
+}

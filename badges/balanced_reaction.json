@@ -1,10 +1,10 @@
 {
   "id": "balanced_reaction",
   "category": "reaction",
-  "title": { "ja": "反応バランス", "en": "Balanced Reaction" },
+  "title": { "ja": "反応品質バランス達成", "en": "Reaction Quality Balance" },
   "description": {
-    "ja": "p50改善(>=12%) または TailIndex<=1.40 を満たし、Retention 7d >=80%",
-    "en": "Achieve either p50 improvement >=12% OR tail index <=1.40 with 7d retention >=80%"
+  "ja": "定着率7日80%以上を保ちつつ 反応中央値12%以上改善 または 反応ばらつき指数1.40以下 を達成",
+  "en": "With 7-day retention ≥80%, achieved either ≥12% median improvement or variability index ≤1.40"
   },
   "conditions": [
     { "type": "retention_rate", "op": ">=", "value": 80 }

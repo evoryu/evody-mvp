@@ -142,14 +142,9 @@ let _loadedGenerated = false
 export async function ensureGeneratedBadgesLoaded() {
   if (_loadedGenerated) return
   try {
-    // Attempt TS first (file exists as .ts, Next handles transform). Fallback to .js if build pipeline changes.
-    let mod: { BADGE_DEFINITIONS?: BadgeDefinition[] } | null = null
-    try {
-      mod = await import('./badges-registry.generated') as { BADGE_DEFINITIONS?: BadgeDefinition[] }
-    } catch {
-      try { mod = await import('./badges-registry.generated.js') as { BADGE_DEFINITIONS?: BadgeDefinition[] } } catch { /* ignore */ }
-    }
-    if (mod && mod.BADGE_DEFINITIONS && Array.isArray(mod.BADGE_DEFINITIONS)) {
+    // 単一トライ: Next.js は拡張子なし TS モジュールを解決できるため余計なフォールバックで警告を出さない
+    const mod = await import('./badges-registry.generated') as { BADGE_DEFINITIONS?: BadgeDefinition[] }
+    if (mod?.BADGE_DEFINITIONS && Array.isArray(mod.BADGE_DEFINITIONS)) {
       registerBadges(mod.BADGE_DEFINITIONS)
       _loadedGenerated = true
     }

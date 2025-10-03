@@ -126,6 +126,61 @@ interface MetricsCtx {
 
 評価フロー: retention 条件が真 AND ( p50改善グループ OR tail index グループ ) が真。
 
+## Retention バッジ階層 (Tiers)
+
+7日リテンション率 (Good+Easy%) は学習品質の代表指標。段階的に目標閾値を設け達成感の細分化を行う。
+
+| バッジID         | 閾値(>=) | Tier | 日本語タイトル | 英語タイトル    | 意図               | 備考                     |
+| ---------------- | -------- | ---- | -------------- | --------------- | ------------------ | ------------------------ |
+| `retention_85`   | 85%      | 1    | 堅実な定着率   | Solid Retention | “基礎を固めた”     | 最初の品質到達ライン     |
+| `retention_high` | 90%      | 2    | 高い定着率     | High Retention  | “継続と定着の両立” | 以前の単独バッジを再分類 |
+| `retention_95`   | 95%      | 3    | エリート定着率 | Elite Retention | “ほぼ完全”         | 変動が大きく維持が難しい |
+
+設計ポリシー:
+
+1. 閾値差は 5% 刻み (学習負荷/確率要因の変動で達成/未達がランダム化しすぎない幅)
+2. Tier は 1 ベース昇順 (難度上昇) で UI 表示に直接利用
+3. より細かい >95% (例: 97%, 98%) は初期 MVP では導入せず後で “上位レジェンド” 系列として別カテゴリ化を検討
+
+### JSON 例 (全階層)
+
+```jsonc
+// Tier1
+{
+  "id": "retention_85",
+  "category": "retention",
+  "title": { "ja": "堅実なリテンション" },
+  "description": { "ja": "7日リテンション率 (Good+Easy%) 85%以上を達成" },
+  "conditions": [{ "type": "retention_rate", "op": ">=", "value": 85 }],
+  "tier": 1,
+  "version": 1
+}
+
+// Tier2
+{
+  "id": "retention_high",
+  "category": "retention",
+  "title": { "ja": "高リテンション" },
+  "description": { "ja": "7日リテンション率 (Good+Easy%) 90%以上を達成" },
+  "conditions": [{ "type": "retention_rate", "op": ">=", "value": 90 }],
+  "tier": 2,
+  "version": 1
+}
+
+// Tier3
+{
+  "id": "retention_95",
+  "category": "retention",
+  "title": { "ja": "エリートリテンション" },
+  "description": { "ja": "7日リテンション率 (Good+Easy%) 95%以上を達成" },
+  "conditions": [{ "type": "retention_rate", "op": ">=", "value": 95 }],
+  "tier": 3,
+  "version": 1
+}
+```
+
+`retention_rate` は評価時点の 7d Rolling Retention (Good+Easy)/(total-Again) を % 化した値 (0-100) を使用。UI 表示時は整数% で丸め。
+
 ## 今後拡張
 
 - 時間帯条件 (peakHour 学習)
@@ -178,3 +233,64 @@ interface MetricsCtx {
 ---
 
 Draft v0.1
+
+---
+
+## 命名ガイドライン (Naming Guidelines)
+
+バッジタイトル / 説明は以下ポリシーで作成:
+
+1. 日本語タイトルは 12〜16 全角程度を目安に「行動 + 数値/結果」を先頭に凝縮 (例: `未処理カード10件削減`).
+2. 英語タイトルは簡潔な Noun Phrase または Result Phrase (`Retention ≥90%`, `Median Reaction +15%`). 記号 `≥`, `≤`, `%` を許容。
+3. シリーズ (Tier) は共通接頭辞 + 明確な閾値差分 (Retention 85 / 90 / 95)。
+4. “高い/エリート” など抽象語は閾値表と対応づけて一貫性を保つ。
+5. 説明文は初登場指標には最初の一文で意味を端的に補足し、2文目以降を省略可能にする (MVP 短文化)。
+6. 英語説明は直訳ではなくユーザ行動ベース (`Achieved 7-day retention of 90% or higher`).
+7. `リテンション` → `定着率` (JP) へ統一。EN は `Retention`。
+
+## 条件テキスト i18n テンプレート
+
+`labels.ts` に条件文テンプレートを登録し、Achievements UI で `${n}`, `${d}` プレースホルダを置換。
+
+| Label Key                        | 例 (ja)                            | EN                                        | 置換値              | 備考                                      |
+| -------------------------------- | ---------------------------------- | ----------------------------------------- | ------------------- | ----------------------------------------- |
+| `condition_streak_days`          | `${n}日連続で学習`                 | `Studied for ${n} consecutive days`       | n=日数              |                                           |
+| `condition_backlog_drop`         | `未処理カードを${n}件以上削減`     | `Reduced backlog by ${n}+ cards`          | n=件数差            | backlog_drop = previous-current           |
+| `condition_reaction_p50_improve` | `反応時間中央値を${n}%以上改善`    | `Improved median reaction time by ${n}%+` | n=改善率整数%       | 内部 value は 0.12 等の比率 (→\*100 丸め) |
+| `condition_tail_index_low`       | `反応ばらつき指数を${n}以下に維持` | `Kept reaction variability ≤ ${n}`        | n=閾値              |                                           |
+| `condition_flatten_low`          | `Flatten指標を${n}以下`            | `Flatten metric ≤ ${n}`                   | n=閾値              |                                           |
+| `condition_retention_rate`       | `定着率${n}%以上`                  | `Retention ≥ ${n}%`                       | n=整数%             | 0-100 スケール                            |
+| `condition_efficiency_score`     | `効率スコア${n}以上`               | `Efficiency score ≥ ${n}`                 | n=score             |                                           |
+| `condition_episodes_total`       | `${d}日間で学習回数${n}件以上`     | `${n}+ study sessions in ${d} days`       | n=回数 d=windowDays | windowDays 省略時=7                       |
+| `anyof_heading`                  | `以下のいずれか`                   | `Any of the following`                    | -                   | anyOf グループ見出し                      |
+| `and_joiner`                     | `かつ`                             | `AND`                                     | -                   | anyOf 内部複合条件 join                   |
+
+レンダリング手順:
+
+1. バッジ定義の `conditions` を AND 列挙してテンプレート置換。
+2. `anyOf` が存在する場合、各グループ内条件を `and_joiner` で結合しリスト表示。
+3. 見出しに `anyof_heading` を使用。
+
+## anyOf 表示 UX ノート
+
+- AND 基本条件 + anyOf 代替条件の両方がある場合は AND 条件を先に表示し、その下に淡色ボックスで OR ブロックをまとめる。
+- 各グループは点付きリスト。グループ内複数条件はインライン連結 (冗長なネストを避ける)。
+- i18n 対応: ロケールスイッチでテンプレート再評価のみ。構造変化不要。
+
+## テストポリシー (MVP)
+
+`npm run test:badges` で以下カテゴリを網羅:
+
+- AND 条件成立/不成立
+- anyOf 単一成立 / 複数成立 / 不成立
+- backlog 差分計算 (previous-current)
+- reaction 改善率 (0.10 = 10%)
+- episodes_total windowDays 分岐 (7d vs 30d)
+
+将来: version 変化差分テスト / 重複 ID 検出 / JSON スキーマ回帰。
+
+## 将来ドキュメント分割案
+
+- `BADGES_SCHEMA.md`: 機械的スキーマ・評価仕様 (現行)
+- `BADGES_GUIDE.md`: 文言/命名/UX ガイド + 例集 + モチベーションデザイン原則
+- `BADGES_CHANGELOG.md`: バッジ追加/閾値変更履歴 (version 差分)

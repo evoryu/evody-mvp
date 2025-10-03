@@ -1,0 +1,11 @@
+{
+  "id": "retention_85",
+  "category": "retention",
+  "title": { "ja": "定着率85%達成", "en": "Retention ≥85%" },
+  "description": { "ja": "直近7日間の定着率が85%以上", "en": "7-day retention (Good+Easy%) reached 85% or higher" },
+  "conditions": [ { "type": "retention_rate", "op": ">=", "value": 85 } ],
+  "tier": 1,
+  "repeatable": false,
+  "version": 1,
+  "tags": ["retention", "quality", "tier"]
+}

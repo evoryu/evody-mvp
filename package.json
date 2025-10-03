@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "validate:badges": "ts-node scripts/generate-badges.ts --validate-only",
     "generate:badges": "ts-node scripts/generate-badges.ts"
+  ,"test:badges": "ts-node -P tsconfig.badge-tests.json src/lib/all-badge-tests.ts",
+  "ci:validate": "ts-node scripts/ci-validate.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

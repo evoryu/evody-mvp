@@ -109,6 +109,24 @@ const JA = {
   infoDeckBacklogPct: 'Backlog Ratio = backlog / (backlog + future). 進行中遅延の割合。40%以上=赤。'
   ,infoShapeMetric: 'Shape = globalPeak / top3Avg: 尖り度指標。1に近いほど平坦 (ピーク突出小)。'
   ,infoSecondWeekWarning: 'Second Week Warning: 2週目負荷集中シグナル (Peak Shift や Balance 比率)。新規導入ペース調整検討。'
+  ,
+  // --- Badge condition templates (placeholders: ${n}, ${d}) ---
+  condition_streak_days: '${n}日連続で学習',
+  condition_backlog_drop: '未処理カードを${n}件以上削減',
+  condition_reaction_p50_improve: '反応時間中央値を${n}%以上改善',
+  condition_tail_index_low: '反応ばらつき指数を${n}以下に維持',
+  condition_flatten_low: 'Flatten指標を${n}以下',
+  condition_retention_rate: '定着率${n}%以上',
+  condition_efficiency_score: '効率スコア${n}以上',
+  condition_episodes_total: '${d}日間で学習回数${n}件以上',
+  anyof_heading: '以下のいずれか',
+  and_joiner: 'かつ'
+  ,tooltipRetentionMetric: '定着率: 直近7日で Good / Easy 判定となったレビュー割合 (Again 除外)。短期変動があるため閾値段階化。'
+  ,tooltipReactionVariability: '反応ばらつき指数: 反応時間の散らばり度合い (低いほど安定)。内部的には上位/中央値比などの合成指標。'
+  ,tooltipReactionMedian: '反応時間中央値: 直近の学習反応時間 (秒) の中央値。改善は効率向上を示唆。'
+  // Inverse metric progress (Achievements)
+  ,tooltipTailIndexInverse: '反応ばらつき指数 (低いほど良い): 現在値が閾値以下で条件達成。バー=閾値/現在 (最大1)。'
+  ,tooltipFlattenInverse: 'Flatten 指標 (低いほど平坦): 現在値が閾値以下で達成。バー=閾値/現在 (最大1)。1.0 に近いほどピーク突出が小。'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -149,6 +167,23 @@ const EN: typeof JA = {
   ,tooltipEarlyRetry: 'Early Retry: Approx = Week1 new * againRate (simplified). All early agains placed on Day2.',
   tooltipTimeLoad: 'Time Load: Estimated minutes = median(sec)*count/60 (rounded).',
   tooltipChainSummary: 'Chain Summary: Aggregate impact of chained reappear pattern (e.g., 1/3/7).'
+  ,
+  // English overrides for badge condition templates
+  condition_streak_days: 'Studied for ${n} consecutive days',
+  condition_backlog_drop: 'Reduced backlog by ${n}+ cards',
+  condition_reaction_p50_improve: 'Improved median reaction time by ${n}%+',
+  condition_tail_index_low: 'Kept reaction variability ≤ ${n}',
+  condition_flatten_low: 'Flatten metric ≤ ${n}',
+  condition_retention_rate: 'Retention ≥ ${n}%',
+  condition_efficiency_score: 'Efficiency score ≥ ${n}',
+  condition_episodes_total: '${n}+ study sessions in ${d} days',
+  anyof_heading: 'Any of the following',
+  and_joiner: 'AND'
+  ,tooltipRetentionMetric: 'Retention: Share of Good/Easy outcomes over last 7 days (Again excluded). Volatile short-term; tiered thresholds.'
+  ,tooltipReactionVariability: 'Reaction Variability Index: Composite spikiness/dispersion of reaction times (lower = steadier).'
+  ,tooltipReactionMedian: 'Median Reaction Time: Median seconds per recent review. Improvement suggests efficiency gains.'
+  ,tooltipTailIndexInverse: 'Reaction Variability (lower is better). Goal achieved when current ≤ target. Bar = target/current (clamped to 1).'
+  ,tooltipFlattenInverse: 'Flatten (lower = flatter). Achieved when current ≤ target. Bar = target/current (clamped). Closer to 1 baseline = flatter schedule.'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;

@@ -6,6 +6,7 @@ import { getBacklogSnapshot, getRetention7d30d } from '@/lib/reviews'
 import { getReactionMetricSnapshot } from '@/lib/analytics'
 import { usePoints } from './points-context'
 import { useToast } from './toast-context'
+import { useLocale } from './locale-context'
 
 // 永続化キー
 const STORAGE_KEY = 'evody:badges'
@@ -43,6 +44,7 @@ export function BadgesProvider({ children }: { children: React.ReactNode }) {
   const awardSet = useMemo(() => new Set(awards.map(a => a.id)), [awards])
   const { points } = usePoints()
   const { showToast } = useToast()
+  const locale = useLocale()
   const evaluatingRef = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -73,13 +75,17 @@ export function BadgesProvider({ children }: { children: React.ReactNode }) {
         saveStored(merged)
         newly.forEach(n => {
           const def = listBadges().find(d => d.id === n.id)
-          if (def) showToast(`Badge獲得: ${def.title.ja}`)
+          if (def) {
+            const title = def.title[locale] || def.title.ja || def.id
+            const msg = locale === 'ja' ? `バッジ獲得: ${title}` : `Unlocked badge: ${title}`
+            showToast(msg)
+          }
         })
       }
     } finally {
       evaluatingRef.current = false
     }
-  }, [awardSet, awards, points, showToast])
+  }, [awardSet, awards, points, showToast, locale])
 
   // 初回 & points 変化時に再評価 (簡易)
   useEffect(() => { void refresh() }, [refresh])

@@ -1,10 +1,10 @@
 {
   "id": "reaction_p50_improve",
   "category": "reaction",
-  "title": { "ja": "反応速度改善", "en": "Reaction Speed Boost" },
+  "title": { "ja": "反応中央値15%改善", "en": "15% Faster Median Reaction" },
   "description": {
-    "ja": "直近7日 p50 反応時間を過去平均より15%改善",
-    "en": "Improve 7d median reaction time by 15% vs prior baseline"
+  "ja": "直近7日の反応時間中央値を過去平均より15%以上短縮した",
+  "en": "7-day median reaction time improved by 15% vs prior average"
   },
   "conditions": [
     { "type": "reaction_p50_improve", "op": ">=", "value": 0.15 }

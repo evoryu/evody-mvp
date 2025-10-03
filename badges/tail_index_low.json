@@ -1,10 +1,10 @@
 {
   "id": "tail_index_low",
   "category": "reaction",
-  "title": { "ja": "安定した反応", "en": "Stable Reactions" },
+  "title": { "ja": "反応ばらつき指数1.35以下", "en": "Low Reaction Variability" },
   "description": {
-    "ja": "直近7日 Tail Index (p90/p50) を 1.35 以下に維持",
-    "en": "Maintain 7d tail index (p90/p50) at 1.35 or lower"
+  "ja": "直近7日の反応ばらつき指数(p90/中央値)を1.35以下に維持",
+  "en": "Kept the 7-day reaction variability index (p90/median) at 1.35 or lower"
   },
   "conditions": [
     { "type": "tail_index_low", "op": "<=", "value": 1.35 }
