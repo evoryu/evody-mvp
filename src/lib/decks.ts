@@ -38,6 +38,162 @@ export const CARDS: Card[] = [
 ]
 
 export const getDeck = (id: string) => DECKS.find(d => d.id === id) || null
-export const getDeckCards = (deckId: string) => CARDS.filter(c => c.deckId === deckId)
+/**
+ * ユーザー上書きカード（localStorage 保管）
+ * キー: evody:cards:<deckId>
+ */
+const LS_PREFIX = 'evody:cards:'
+
+function isBrowser() {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+}
+
+export function getUserCards(deckId: string): Card[] {
+  if (!isBrowser()) return []
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + deckId)
+    if (!raw) return []
+    const arr: unknown = JSON.parse(raw)
+    if (!Array.isArray(arr)) return []
+    const toStr = (v: unknown): string | undefined => {
+      if (typeof v === 'string') return v
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+      return undefined
+    }
+    const out: Card[] = []
+    for (const x of arr as unknown[]) {
+      if (typeof x !== 'object' || x == null) continue
+      const r = x as Record<string, unknown>
+      const id = toStr(r.id) ?? ''
+      const front = toStr(r.front) ?? ''
+      const back = toStr(r.back) ?? ''
+      const example = toStr(r.example)
+      if (!id || !front || !back) continue
+      out.push({ id, deckId: toStr(r.deckId) ?? deckId, front, back, example })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+export function setUserCards(deckId: string, cards: Card[]) {
+  if (!isBrowser()) return
+  try {
+    const sanitized = cards.map(c => ({ ...c, deckId }))
+    localStorage.setItem(LS_PREFIX + deckId, JSON.stringify(sanitized))
+  } catch {}
+}
+
+/**
+ * ベースカード + ユーザー上書きカードをマージ（id が同一ならユーザー側で上書き）
+ */
+export const getDeckCards = (deckId: string) => {
+  const base = CARDS.filter(c => c.deckId === deckId)
+  const user = getUserCards(deckId)
+  if (user.length === 0) return base
+  const map = new Map<string, Card>()
+  for (const c of base) map.set(c.id, c)
+  for (const c of user) map.set(c.id, { ...c, deckId })
+  return Array.from(map.values())
+}
 
 export const countCards = (deckId: string) => getDeckCards(deckId).length
+
+/**
+ * アップサート（id が一致するものは上書き、無ければ追加）
+ */
+export function upsertUserCards(deckId: string, newCards: Omit<Card, 'deckId'>[]) {
+  const current = getUserCards(deckId)
+  const map = new Map<string, Card>()
+  for (const c of current) map.set(c.id, c)
+  for (const nc of newCards) {
+    map.set(nc.id, { ...nc, deckId })
+  }
+  setUserCards(deckId, Array.from(map.values()))
+}
+
+/**
+ * CSV 文字列生成（ヘッダ付）: id,front,back,example
+ */
+export function exportDeckToCSV(deckId: string): string {
+  const rows = getDeckCards(deckId)
+  const esc = (s: string | undefined) => {
+    const v = s ?? ''
+    // ダブルクォートと改行/カンマが含まれる場合はクォートしてエスケープ
+    if (/[",\n\r]/.test(v)) return '"' + v.replace(/"/g, '""') + '"'
+    return v
+  }
+  const lines = ['id,front,back,example']
+  for (const r of rows) {
+    lines.push([esc(r.id), esc(r.front), esc(r.back), esc(r.example)].join(','))
+  }
+  return lines.join('\n')
+}
+
+/**
+ * 1行のCSVを安全にsplit（簡易）
+ * ダブルクォート内のカンマは無視。ダブルクォートは二重にエスケープ。
+ */
+function splitCsvLine(line: string): string[] {
+  const result: string[] = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { // エスケープされた quote
+          cur += '"'
+          i++
+        } else {
+          inQuotes = false
+        }
+      } else {
+        cur += ch
+      }
+    } else {
+      if (ch === ',') {
+        result.push(cur)
+        cur = ''
+      } else if (ch === '"') {
+        inQuotes = true
+      } else {
+        cur += ch
+      }
+    }
+  }
+  result.push(cur)
+  return result
+}
+
+export type ParsedCsvCard = { id: string; front: string; back: string; example?: string }
+
+/**
+ * CSV を配列にパース。ヘッダ必須: id,front,back,(example?)
+ */
+export function parseDeckCsv(csvText: string): ParsedCsvCard[] {
+  const lines = csvText.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim().length > 0)
+  if (lines.length === 0) return []
+  const header = splitCsvLine(lines[0]).map(s => s.trim().toLowerCase())
+  const idx = {
+    id: header.indexOf('id'),
+    front: header.indexOf('front'),
+    back: header.indexOf('back'),
+    example: header.indexOf('example'),
+  }
+  if (idx.id < 0 || idx.front < 0 || idx.back < 0) {
+    throw new Error('CSVヘッダは id,front,back,(example) が必要です')
+  }
+  const out: ParsedCsvCard[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCsvLine(lines[i])
+    const id = (cols[idx.id] ?? '').trim()
+    const front = (cols[idx.front] ?? '').trim()
+    const back = (cols[idx.back] ?? '').trim()
+    const example = idx.example >= 0 ? (cols[idx.example] ?? '').trim() : undefined
+    if (!id || !front || !back) continue
+    out.push({ id, front, back, example: example || undefined })
+  }
+  return out
+}
