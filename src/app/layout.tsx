@@ -12,6 +12,7 @@ import { LocaleProvider } from './locale-context'
 import LocaleToggle from '@/components/locale-toggle'
 import { BadgeRegistryLoader } from './badge-registry-loader'
 import { BadgesProvider } from './badges-context'
+import { MiniAd } from '@/components/mini-ad'
 
 const notoSansJP = Noto_Sans_JP({
   weight: ['400', '500', '700'],
@@ -114,6 +115,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </footer>
+            {/* 右下ミニ広告（10分間隔） */}
+            <MiniAd minIntervalMs={10 * 60 * 1000} />
             </BadgesProvider>
           </ToastProvider>
         </PointsProvider>
