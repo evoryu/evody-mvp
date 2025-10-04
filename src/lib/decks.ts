@@ -197,3 +197,84 @@ export function parseDeckCsv(csvText: string): ParsedCsvCard[] {
   }
   return out
 }
+
+/** 詳細パース結果: 有効行と無効行の両方を返す */
+export type CsvInvalidRow = { rowNumber: number; reason: string; raw: string }
+export function parseDeckCsvDetailed(csvText: string): { valid: ParsedCsvCard[]; invalid: CsvInvalidRow[]; header: { hasExample: boolean } } {
+  const linesAll = csvText.replace(/\r\n?/g, '\n').split('\n')
+  const lines = linesAll.filter(l => l.trim().length > 0)
+  if (lines.length === 0) return { valid: [], invalid: [], header: { hasExample: false } }
+  const headerCols = splitCsvLine(lines[0]).map(s => s.trim().toLowerCase())
+  const idx = {
+    id: headerCols.indexOf('id'),
+    front: headerCols.indexOf('front'),
+    back: headerCols.indexOf('back'),
+    example: headerCols.indexOf('example'),
+  }
+  if (idx.id < 0 || idx.front < 0 || idx.back < 0) {
+    throw new Error('CSVヘッダは id,front,back,(example) が必要です')
+  }
+  const valid: ParsedCsvCard[] = []
+  const invalid: CsvInvalidRow[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const raw = lines[i]
+    const cols = splitCsvLine(raw)
+    const id = (cols[idx.id] ?? '').trim()
+    const front = (cols[idx.front] ?? '').trim()
+    const back = (cols[idx.back] ?? '').trim()
+    const example = idx.example >= 0 ? (cols[idx.example] ?? '').trim() : undefined
+    const rowNumber = i + 1 // ヘッダ行を含む1始まり
+    if (!id || !front || !back) {
+      const miss = [!id && 'id', !front && 'front', !back && 'back'].filter(Boolean).join(', ')
+      invalid.push({ rowNumber, reason: `必須列欠落: ${miss}`, raw })
+      continue
+    }
+    valid.push({ id, front, back, example: example || undefined })
+  }
+  return { valid, invalid, header: { hasExample: idx.example >= 0 } }
+}
+
+/** CSVのID重複を検出 */
+export function findCsvDuplicates(rows: ParsedCsvCard[]): string[] {
+  const freq = new Map<string, number>()
+  for (const r of rows) freq.set(r.id, (freq.get(r.id) ?? 0) + 1)
+  return Array.from(freq.entries()).filter(([, c]) => c > 1).map(([id]) => id)
+}
+
+export type RowDiffStatus = 'new' | 'updated' | 'unchanged'
+export function diffDeckCards(
+  deckId: string,
+  rows: ParsedCsvCard[],
+  mode: 'replace' | 'merge'
+): {
+  perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus }>
+  newIds: string[]
+  updatedIds: string[]
+  unchangedIds: string[]
+  removedIds: string[]
+  duplicates: string[]
+} {
+  const existing = getDeckCards(deckId)
+  const exMap = new Map(existing.map(c => [c.id, c]))
+  const perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus }> = []
+  const newIds: string[] = []
+  const updatedIds: string[] = []
+  const unchangedIds: string[] = []
+  for (const r of rows) {
+    const ex = exMap.get(r.id)
+    if (!ex) {
+      perRow.push({ row: r, status: 'new' })
+      newIds.push(r.id)
+    } else if (ex.front !== r.front || ex.back !== r.back || (ex.example ?? '') !== (r.example ?? '')) {
+      perRow.push({ row: r, status: 'updated' })
+      updatedIds.push(r.id)
+    } else {
+      perRow.push({ row: r, status: 'unchanged' })
+      unchangedIds.push(r.id)
+    }
+  }
+  const incomingIds = new Set(rows.map(r => r.id))
+  const removedIds = mode === 'replace' ? existing.filter(c => !incomingIds.has(c.id)).map(c => c.id) : []
+  const duplicates = findCsvDuplicates(rows)
+  return { perRow, newIds, updatedIds, unchangedIds, removedIds, duplicates }
+}

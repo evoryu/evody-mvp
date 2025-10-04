@@ -3,7 +3,19 @@
 import * as React from 'react'
 import { use } from 'react'
 import { useToast } from '@/app/toast-context'
-import { countCards, exportDeckToCSV, getDeck, parseDeckCsv, setUserCards, upsertUserCards, type ParsedCsvCard } from '@/lib/decks'
+import {
+  countCards,
+  exportDeckToCSV,
+  getDeck,
+  getUserCards,
+  setUserCards,
+  upsertUserCards,
+  parseDeckCsvDetailed,
+  diffDeckCards,
+  type ParsedCsvCard,
+  type CsvInvalidRow,
+  type Card,
+} from '@/lib/decks'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -14,6 +26,15 @@ export default function DeckDetailPage({ params }: Props) {
   const forceRerender = React.useReducer((x: number) => x + 1, 0)[1]
   const [replaceAll, setReplaceAll] = React.useState(false)
   const [lastImport, setLastImport] = React.useState<{ rows: ParsedCsvCard[]; mode: 'replace'|'merge' } | null>(null)
+  const [undoSnapshot, setUndoSnapshot] = React.useState<Card[] | null>(null)
+  const [pending, setPending] = React.useState<{
+    rows: ParsedCsvCard[]
+    invalid: CsvInvalidRow[]
+    duplicates: string[]
+    diff: ReturnType<typeof diffDeckCards>
+    mode: 'replace' | 'merge'
+    fileName?: string
+  } | null>(null)
 
   const hasMessage = (e: unknown): e is { message: unknown } =>
     typeof e === 'object' && e !== null && 'message' in e
@@ -36,23 +57,54 @@ export default function DeckDetailPage({ params }: Props) {
     }
   }, [id, showToast])
 
-  const handleImport = React.useCallback(async (file: File) => {
+  const handleFilePicked = React.useCallback(async (file: File) => {
     try {
       const text = await file.text()
-      const rows = parseDeckCsv(text)
-      if (replaceAll) {
-        setUserCards(id, rows.map(r => ({ ...r, deckId: id })))
-      } else {
-        upsertUserCards(id, rows.map(r => ({ id: r.id, front: r.front, back: r.back, example: r.example })))
-      }
-      forceRerender()
-      showToast(`CSVから${rows.length}枚を${replaceAll ? '置き換え' : 'マージ'}しました`)
-      setLastImport({ rows, mode: replaceAll ? 'replace' : 'merge' })
+      const parsed = parseDeckCsvDetailed(text)
+      const mode = replaceAll ? 'replace' : 'merge'
+      const diff = diffDeckCards(id, parsed.valid, mode)
+      setPending({
+        rows: parsed.valid,
+        invalid: parsed.invalid,
+        duplicates: diff.duplicates,
+        diff,
+        mode,
+        fileName: file.name,
+      })
     } catch (e) {
       const msg = hasMessage(e) ? String(e.message) : '不明なエラー'
       showToast(`CSVの読み込みに失敗しました: ${msg}`)
     }
-  }, [id, replaceAll, showToast, forceRerender])
+  }, [id, replaceAll, showToast])
+
+  const applyPendingImport = React.useCallback(() => {
+    if (!pending) return
+    // 直前のユーザー上書きカードをスナップショット
+    const snapshot = getUserCards(id)
+    const rows = pending.rows
+    if (pending.mode === 'replace') {
+      setUserCards(id, rows.map(r => ({ ...r, deckId: id })))
+    } else {
+      upsertUserCards(id, rows.map(r => ({ id: r.id, front: r.front, back: r.back, example: r.example })))
+    }
+    setUndoSnapshot(snapshot)
+    setLastImport({ rows, mode: pending.mode })
+    setPending(null)
+    forceRerender()
+    const { newIds, updatedIds, removedIds } = pending.diff
+    const extras = pending.invalid.length > 0 ? `（無効行 ${pending.invalid.length} 件はスキップ）` : ''
+    const removedMsg = pending.mode === 'replace' && removedIds.length > 0 ? `、削除 ${removedIds.length}` : ''
+    showToast(`取り込み完了: 新規 ${newIds.length}、更新 ${updatedIds.length}${removedMsg}${extras}`)
+  }, [pending, id, forceRerender, showToast])
+
+  const handleUndo = React.useCallback(() => {
+    if (!undoSnapshot) return
+    setUserCards(id, undoSnapshot)
+    setUndoSnapshot(null)
+    setLastImport(null)
+    forceRerender()
+    showToast('直前のインポートを取り消しました')
+  }, [undoSnapshot, id, forceRerender, showToast])
 
   if (!deck) return <p className="text-red-600">デッキが見つかりません。</p>
 
@@ -117,7 +169,7 @@ export default function DeckDetailPage({ params }: Props) {
               accept=".csv,text/csv"
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) handleImport(f)
+                if (f) handleFilePicked(f)
                 e.currentTarget.value = ''
               }}
               className="block text-sm"
@@ -158,10 +210,101 @@ export default function DeckDetailPage({ params }: Props) {
                   </tbody>
                 </table>
               </div>
+              {undoSnapshot && (
+                <div className="mt-3 text-right">
+                  <button onClick={handleUndo} className="text-[12px] underline text-[var(--c-text-secondary)] hover:text-[var(--c-text)]">直前の取り込みを取り消す</button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* 確認モーダル */}
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setPending(null)} />
+          <div className="relative z-10 w-[min(720px,92vw)] rounded-xl border bg-[var(--c-bg)] p-5 shadow-xl">
+            <h3 className="text-lg font-semibold mb-2">CSV 取り込みの確認</h3>
+            <p className="text-sm text-[var(--c-text-secondary)] mb-3">{pending.fileName || '選択ファイル'} を {pending.mode === 'replace' ? '置き換え' : 'マージ'} モードで取り込みます。</p>
+
+            <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg border p-3">
+                <div className="font-medium mb-1">バリデーション</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li>有効行: {pending.rows.length}</li>
+                  <li>無効行: {pending.invalid.length}</li>
+                  <li>重複ID: {pending.duplicates.length}</li>
+                </ul>
+                {pending.invalid.length > 0 && (
+                  <div className="mt-2 max-h-28 overflow-auto text-[12px]">
+                    <div className="text-[var(--c-text-secondary)] mb-1">無効行の一部（最大5件）</div>
+                    <ul className="space-y-1">
+                      {pending.invalid.slice(0,5).map(iv => (
+                        <li key={iv.rowNumber} className="line-clamp-1">
+                          行 {iv.rowNumber}: {iv.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="font-medium mb-1">差分内訳</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li>新規: {pending.diff.newIds.length}</li>
+                  <li>更新: {pending.diff.updatedIds.length}</li>
+                  <li className="text-[var(--c-text-secondary)]">変更なし: {pending.diff.unchangedIds.length}</li>
+                  {pending.mode === 'replace' && (
+                    <li>削除対象（置き換え）: {pending.diff.removedIds.length}</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <div className="overflow-auto rounded-lg border">
+              <table className="w-full text-left text-[13px]">
+                <thead className="text-[11px] text-[var(--c-text-secondary)]">
+                  <tr>
+                    <th className="px-2 py-1">id</th>
+                    <th className="px-2 py-1">front</th>
+                    <th className="px-2 py-1">back</th>
+                    <th className="px-2 py-1">example</th>
+                    <th className="px-2 py-1">状態</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.diff.perRow.slice(0,5).map(({ row, status }) => (
+                    <tr key={row.id} className="border-t">
+                      <td className="px-2 py-1 font-mono text-xs">{row.id}</td>
+                      <td className="px-2 py-1">{row.front}</td>
+                      <td className="px-2 py-1">{row.back}</td>
+                      <td className="px-2 py-1 text-[var(--c-text-muted)]">{row.example || ''}</td>
+                      <td className="px-2 py-1">
+                        {status === 'new' && <span className="text-green-600">新規</span>}
+                        {status === 'updated' && <span className="text-blue-600">更新</span>}
+                        {status === 'unchanged' && <span className="text-[var(--c-text-secondary)]">変更なし</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {pending.duplicates.length > 0 && (
+              <p className="mt-2 text-[12px] text-amber-600">注意: 重複IDが存在します。同一IDは後に出現した行で上書きされます。</p>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button className="btn-secondary rounded-xl px-4 py-2" onClick={() => setPending(null)}>キャンセル</button>
+              <button
+                className="action-button rounded-xl px-4 py-2"
+                onClick={applyPendingImport}
+              >{pending.mode === 'replace' ? '置き換えを実行' : 'マージを実行'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
