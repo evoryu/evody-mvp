@@ -76,8 +76,8 @@ npm run build
 - [状態管理](./docs/STATE.md)
 - [ポイント仕様](./docs/POINTS.md)
 - [UIガイド](./docs/UI_GUIDE.md)
- - [実験(Experiment)概要](./docs/EXPERIMENTS.md)
- - [実験イベント送信エンドポイント設定](./docs/EXPERIMENTS_ENDPOINT.md)
+- [実験(Experiment)概要](./docs/EXPERIMENTS.md)
+- [実験イベント送信エンドポイント設定](./docs/EXPERIMENTS_ENDPOINT.md)
 
 ### 実験テストの実行
 
