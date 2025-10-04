@@ -49,14 +49,19 @@ export default function QuickStudyPage() {
   React.useEffect(() => { doneRef.current = done }, [done])
   const revealAtRef = React.useRef<number | null>(null)
 
-  const orderedIds = React.useMemo(()=> getDueIds(SEED.map(c=>c.id)), [])
-  const card = React.useMemo(()=> SEED.find(c=> c.id === orderedIds[i])!, [orderedIds, i])
+  const allIds = React.useMemo(()=> SEED.map(c=>c.id), [])
+  const dueIds = React.useMemo(()=> getDueIds(allIds), [allIds])
+  const effectiveIds = dueIds.length ? dueIds : allIds
+  const card = React.useMemo(()=> {
+    const id = effectiveIds[i]
+    return SEED.find(c=> c.id === id) || null
+  }, [effectiveIds, i])
 
   const next = React.useCallback(() => {
     setReveal(false)
-    if (i + 1 >= orderedIds.length) setDone(true)
+    if (i + 1 >= effectiveIds.length) setDone(true)
     else setI(i + 1)
-  }, [i, orderedIds.length])
+  }, [i, effectiveIds.length])
 
   const onGrade = React.useCallback((g: Grade) => {
     let singleDelta: number | undefined
@@ -72,12 +77,14 @@ export default function QuickStudyPage() {
     else correctRef.current += 1
     // 簡易SRSログ (Quick学習は仮deckId 'quick')
     try {
-      logReview(card.id, 'quick', g, Date.now(), singleDelta)
-      schedule(card.id, g)
+      if (card) {
+        logReview(card.id, 'quick', g, Date.now(), singleDelta)
+        schedule(card.id, g)
+      }
     } catch {}
     showToast(`${g}評価で ${pts}pt 獲得！`)
     next()
-  }, [add, next, showToast, card?.id])
+  }, [add, next, showToast, card])
 
   React.useEffect(() => {
     if (doneRef.current) return
@@ -98,7 +105,7 @@ export default function QuickStudyPage() {
     return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
 
-  const progress = Math.round(((done ? orderedIds.length : i) / (orderedIds.length||1)) * 100)
+  const progress = Math.round(((done ? effectiveIds.length : i) / (effectiveIds.length||1)) * 100)
 
   // 完了時に一度だけEpisode保存
   React.useEffect(() => {
@@ -168,7 +175,7 @@ export default function QuickStudyPage() {
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
                   <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
-                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{orderedIds.length}</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{effectiveIds.length}</div>
                 </div>
               </div>
             </div>
@@ -201,7 +208,7 @@ export default function QuickStudyPage() {
       <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]">
         <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-sm text-[var(--c-text-muted)]">{i + 1} / {SEED.length}</p>
+  <p className="text-sm text-[var(--c-text-muted)]">{Math.min(i + 1, effectiveIds.length)} / {effectiveIds.length}</p>
 
       <motion.div
         className="task-card relative overflow-hidden rounded-2xl border p-8 shadow-lg hover:shadow-xl"
@@ -209,7 +216,7 @@ export default function QuickStudyPage() {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
-        <p className="font-numeric text-[42px] font-bold tracking-tight">{card.front}</p>
+  <p className="font-numeric text-[42px] font-bold tracking-tight">{card?.front ?? ''}</p>
         <AnimatePresence mode="wait">
           {reveal ? (
             <motion.div
@@ -220,8 +227,8 @@ export default function QuickStudyPage() {
               transition={{ duration: 0.2 }}
               className="mt-6 space-y-3"
             >
-              <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card.back}</p>
-              {card.example && (
+              <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card?.back ?? ''}</p>
+              {card?.example && (
                 <p className="task-input rounded-lg border px-4 py-3 text-[15px] leading-relaxed">
                   例）{card.example}
                 </p>
