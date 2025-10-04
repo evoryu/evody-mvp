@@ -354,13 +354,15 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                       return whatIfResult.simulated.days.map((d,i)=>{
                         const before = whatIfResult.original.days[i]?.count || 0
                         const after = d.count
+                        const diff = after - before
+                        const label = `${d.date}: Before ${before}, After ${after}, Diff ${diff>0?'+':''}${diff}`
                         return (
-                          <div key={d.date} className="flex flex-col items-center gap-0.5">
+                          <div key={d.date} className="flex flex-col items-center gap-0.5" title={label} aria-label={label}>
                             <div className="w-[10px] h-8 relative">
                               <div className="absolute bottom-0 left-[2px] w-[3px] rounded-sm" style={{height: (before/peak)*32, background:'var(--c-accent)', opacity:0.35}} />
                               <div className="absolute bottom-0 left-[5px] w-[3px] rounded-sm" style={{height: (after/peak)*32, background:'var(--c-accent)'}} />
                             </div>
-                            <div className="text-[7px] tabular-nums text-[var(--c-text-muted)]">{after-before>0?'+':''}{after-before}</div>
+                            <div className="text-[7px] tabular-nums text-[var(--c-text-muted)]" aria-hidden="true">{diff>0?'+':''}{diff}</div>
                           </div>
                         )
                       })
