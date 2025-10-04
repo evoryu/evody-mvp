@@ -7,6 +7,7 @@ import { GradeButton as ImportedGradeButton } from '@/components/grade-button'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { saveEpisode, formatEpisodePost } from '@/lib/episodes'
+import { getDueIds, schedule } from '@/lib/srs'
 import { logReview } from '@/lib/reviews'
 import { useSocial } from '@/app/social-context'
 
@@ -48,13 +49,14 @@ export default function QuickStudyPage() {
   React.useEffect(() => { doneRef.current = done }, [done])
   const revealAtRef = React.useRef<number | null>(null)
 
-  const card = SEED[i]
+  const orderedIds = React.useMemo(()=> getDueIds(SEED.map(c=>c.id)), [])
+  const card = React.useMemo(()=> SEED.find(c=> c.id === orderedIds[i])!, [orderedIds, i])
 
   const next = React.useCallback(() => {
     setReveal(false)
-    if (i + 1 >= SEED.length) setDone(true)
+    if (i + 1 >= orderedIds.length) setDone(true)
     else setI(i + 1)
-  }, [i])
+  }, [i, orderedIds.length])
 
   const onGrade = React.useCallback((g: Grade) => {
     let singleDelta: number | undefined
@@ -69,7 +71,10 @@ export default function QuickStudyPage() {
     if (g === 'Again') incorrectRef.current += 1
     else correctRef.current += 1
     // 簡易SRSログ (Quick学習は仮deckId 'quick')
-    try { logReview(card.id, 'quick', g, Date.now(), singleDelta) } catch {}
+    try {
+      logReview(card.id, 'quick', g, Date.now(), singleDelta)
+      schedule(card.id, g)
+    } catch {}
     showToast(`${g}評価で ${pts}pt 獲得！`)
     next()
   }, [add, next, showToast, card?.id])
@@ -93,7 +98,7 @@ export default function QuickStudyPage() {
     return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
 
-  const progress = Math.round(((done ? SEED.length : i) / SEED.length) * 100)
+  const progress = Math.round(((done ? orderedIds.length : i) / (orderedIds.length||1)) * 100)
 
   // 完了時に一度だけEpisode保存
   React.useEffect(() => {
@@ -163,7 +168,7 @@ export default function QuickStudyPage() {
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
                   <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
-                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{SEED.length}</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{orderedIds.length}</div>
                 </div>
               </div>
             </div>

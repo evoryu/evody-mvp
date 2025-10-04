@@ -4,6 +4,7 @@ import React, { use } from 'react'
 import { usePoints } from '@/app/points-context'
 import { useToast } from '@/app/toast-context'
 import { getDeck, getDeckCards } from '@/lib/decks'
+import { getDueIds, schedule } from '@/lib/srs'
 import { GradeButton as ImportedGradeButton } from '@/components/grade-button'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -20,6 +21,7 @@ export default function StudySessionPage({ params }: Props) {
   const { deckId } = use(params)                // ← ここで unwrap
   const deck = getDeck(deckId)
   const cards = getDeckCards(deckId)
+  const orderedIds = React.useMemo(()=> getDueIds((cards||[]).map(c=>c.id)), [cards])
   const { add } = usePoints()
   const { showToast } = useToast()
   const social = React.useRef<null | ReturnType<typeof useSocial>>(null)
@@ -41,13 +43,13 @@ export default function StudySessionPage({ params }: Props) {
   const revealAtRef = React.useRef<number | null>(null)
 
   // 現在のカード（レンダーおよび onGrade 用）
-  const card = cards[i]
+  const card = React.useMemo(()=> cards.find(c=> c.id === orderedIds[i])!, [cards, orderedIds, i])
 
   const next = React.useCallback(() => {
     setReveal(false)
-    if (i + 1 >= (cards?.length ?? 0)) setDone(true)
+    if (i + 1 >= (orderedIds?.length ?? 0)) setDone(true)
     else setI(i + 1)
-  }, [i, cards?.length])
+  }, [i, orderedIds?.length])
 
   const onGrade = React.useCallback((g: Grade) => {
     let singleDelta: number | undefined
@@ -61,7 +63,12 @@ export default function StudySessionPage({ params }: Props) {
     add(pts)
     if (g === 'Again') incorrectRef.current += 1
     else correctRef.current += 1
-    try { if (card) logReview(card.id, deckId, g, Date.now(), singleDelta) } catch {}
+    try {
+      if (card) {
+        logReview(card.id, deckId, g, Date.now(), singleDelta)
+        schedule(card.id, g)
+      }
+    } catch {}
     showToast(`${g}評価で ${pts}pt 獲得！`)
     next()
   }, [add, next, showToast, card, deckId])
@@ -86,7 +93,7 @@ export default function StudySessionPage({ params }: Props) {
     return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
 
-  const progress = Math.round(((done ? cards.length : i) / cards.length) * 100)
+  const progress = Math.round(((done ? orderedIds.length : i) / (orderedIds.length||1)) * 100)
 
   // 完了時Episode保存 + 自動投稿
   React.useEffect(() => {
@@ -156,7 +163,7 @@ export default function StudySessionPage({ params }: Props) {
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
                   <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
-                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{cards.length}</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{orderedIds.length}</div>
                 </div>
               </div>
             </div>
