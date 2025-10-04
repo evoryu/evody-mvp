@@ -18,6 +18,7 @@ npm run dev
 ```
 
 本番環境（Vercel等）:
+
 - 環境変数に `NEXT_PUBLIC_EXP_EVENTS_ENDPOINT` を登録
 - デプロイ後はクライアントからそのURLへ beacon 送信されます
 
@@ -27,12 +28,25 @@ npm run dev
 {
   "type": "experiment_events",
   "events": [
-    { "type": "exposure", "key": "ui_header", "variant": "A", "ts": 1730000000000 },
-    { "type": "conversion", "key": "ui_header", "metric": "clicked", "variant": "A", "value": 1, "ts": 1730000000500 }
-  ]
+    {
+      "type": "exposure",
+      "key": "ui_header",
+      "variant": "A",
+      "ts": 1730000000000,
+    },
+    {
+      "type": "conversion",
+      "key": "ui_header",
+      "metric": "clicked",
+      "variant": "A",
+      "value": 1,
+      "ts": 1730000000500,
+    },
+  ],
 }
 ```
 
 ## 注意
+
 - `NEXT_PUBLIC_` プレフィックスの環境変数はクライアントに公開されます。認証や秘密鍵は絶対に含めないでください。
 - エンドポイント側で CSP/コルス/認証の設計を別途行ってください。

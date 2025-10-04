@@ -76,3 +76,19 @@ npm run build
 - [状態管理](./docs/STATE.md)
 - [ポイント仕様](./docs/POINTS.md)
 - [UIガイド](./docs/UI_GUIDE.md)
+ - [実験(Experiment)概要](./docs/EXPERIMENTS.md)
+ - [実験イベント送信エンドポイント設定](./docs/EXPERIMENTS_ENDPOINT.md)
+
+### 実験テストの実行
+
+実験アナリティクスのスモークテストをローカルで一括実行できます。
+
+```bash
+npm run test:experiments
+```
+
+送信先を変更したい場合（プレビュー/本番等）、環境変数で上書き可能です（未設定時は `/__exp_exposure`）。
+
+```powershell
+$env:NEXT_PUBLIC_EXP_EVENTS_ENDPOINT = "https://example.test/exp-events"; npm run dev
+```
