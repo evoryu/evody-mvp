@@ -6,19 +6,14 @@
 - Profile: 今日の合計獲得pt表示
 - 収益化モック: ミニ窓広告のUI（右下パネル・視聴カウント）
 
-## Naming Migration Cleanup (予定)
+## Naming Migration Cleanup (完了)
 
-- (日付+14d) 目安で以下の "(旧: ...)" 表記を削除:
-  - 学習量シミュレーター (旧: What-if)
-  - 今後のレビュー負荷 (旧: Upcoming Review Load)
-  - 最大/日 (Peak) の (Peak)
-  - 内訳 (旧: Stack)
-  - バランス (旧: Balance)
-  - 初期再挑戦 (旧: Early Failures)
-  - 学習時間 (旧: Time Load)
-  - 追加パターンサマリー (旧: Chain Summary)
-  - 未消化 (旧: Backlog)
-- 削除後: Tooltip に英語原語を必要最低限残し検索性確保
+以下を反映済み（ラベル値のみ更新・キーは不変）:
+  - 学習量シミュレーター
+  - 今後のレビュー負荷
+  - 最大/日 / 中央値/日（英語併記の (Peak) を撤去）
+  - 内訳 / バランス / 初期再挑戦 / 学習時間 / 追加パターンサマリー / 未消化
+完了後の方針: Tooltip に必要最低限の英語原語を残し、検索性を確保。
 
 ### i18n Scaffold Follow-up
 
