@@ -247,7 +247,7 @@ export function diffDeckCards(
   rows: ParsedCsvCard[],
   mode: 'replace' | 'merge'
 ): {
-  perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus }>
+  perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus; before?: { front?: string; back?: string; example?: string } }>
   newIds: string[]
   updatedIds: string[]
   unchangedIds: string[]
@@ -256,7 +256,7 @@ export function diffDeckCards(
 } {
   const existing = getDeckCards(deckId)
   const exMap = new Map(existing.map(c => [c.id, c]))
-  const perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus }> = []
+  const perRow: Array<{ row: ParsedCsvCard; status: RowDiffStatus; before?: { front?: string; back?: string; example?: string } }> = []
   const newIds: string[] = []
   const updatedIds: string[] = []
   const unchangedIds: string[] = []
@@ -266,7 +266,11 @@ export function diffDeckCards(
       perRow.push({ row: r, status: 'new' })
       newIds.push(r.id)
     } else if (ex.front !== r.front || ex.back !== r.back || (ex.example ?? '') !== (r.example ?? '')) {
-      perRow.push({ row: r, status: 'updated' })
+      const before: { front?: string; back?: string; example?: string } = {}
+      if (ex.front !== r.front) before.front = ex.front
+      if (ex.back !== r.back) before.back = ex.back
+      if ((ex.example ?? '') !== (r.example ?? '')) before.example = ex.example
+      perRow.push({ row: r, status: 'updated', before })
       updatedIds.push(r.id)
     } else {
       perRow.push({ row: r, status: 'unchanged' })

@@ -304,19 +304,24 @@ export default function DeckDetailPage({ params }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(showAllRows ? pending.diff.perRow : pending.diff.perRow.slice(0,5)).map(({ row, status }) => (
-                    <tr key={row.id} className={`border-t ${status==='new' ? 'bg-emerald-50 dark:bg-emerald-950/20' : status==='updated' ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}>
-                      <td className="px-2 py-1 font-mono text-xs">{row.id}</td>
-                      <td className="px-2 py-1">{row.front}</td>
-                      <td className="px-2 py-1">{row.back}</td>
-                      <td className="px-2 py-1 text-[var(--c-text-muted)]">{row.example || ''}</td>
-                      <td className="px-2 py-1">
-                        {status === 'new' && <span className="text-green-600">新規</span>}
-                        {status === 'updated' && <span className="text-blue-600">更新</span>}
-                        {status === 'unchanged' && <span className="text-[var(--c-text-secondary)]">変更なし</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {(showAllRows ? pending.diff.perRow : pending.diff.perRow.slice(0,5)).map(({ row, status, before }) => {
+                    const fChanged = !!before?.front
+                    const bChanged = !!before?.back
+                    const eChanged = !!before?.example
+                    return (
+                      <tr key={row.id} className={`border-t ${status==='new' ? 'bg-emerald-50 dark:bg-emerald-950/20' : status==='updated' ? 'bg-blue-50/40 dark:bg-blue-950/10' : ''}`}>
+                        <td className="px-2 py-1 font-mono text-xs">{row.id}</td>
+                        <td className={`px-2 py-1 ${fChanged? 'bg-amber-50 dark:bg-amber-950/20 ring-1 ring-amber-200/70 rounded' : ''}`} title={fChanged? `Before: ${before?.front ?? ''}`: undefined}>{row.front}</td>
+                        <td className={`px-2 py-1 ${bChanged? 'bg-amber-50 dark:bg-amber-950/20 ring-1 ring-amber-200/70 rounded' : ''}`} title={bChanged? `Before: ${before?.back ?? ''}`: undefined}>{row.back}</td>
+                        <td className={`px-2 py-1 ${eChanged? 'bg-amber-50 dark:bg-amber-950/20 ring-1 ring-amber-200/70 rounded' : 'text-[var(--c-text-muted)]'}`} title={eChanged? `Before: ${before?.example ?? ''}`: undefined}>{row.example || ''}</td>
+                        <td className="px-2 py-1">
+                          {status === 'new' && <span className="text-green-600">新規</span>}
+                          {status === 'updated' && <span className="text-blue-600">更新</span>}
+                          {status === 'unchanged' && <span className="text-[var(--c-text-secondary)]">変更なし</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
