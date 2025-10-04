@@ -11,6 +11,7 @@
     "validate:badges": "ts-node scripts/generate-badges.ts --validate-only",
     "generate:badges": "ts-node scripts/generate-badges.ts"
   ,"test:badges": "ts-node -P tsconfig.badge-tests.json src/lib/all-badge-tests.ts",
+  "test:experiments": "node -r ./scripts/ts-node-register.cjs ./src/lib/run-experiments-tests.cjs",
   "ci:validate": "ts-node scripts/ci-validate.ts"
   },
   "dependencies": {
