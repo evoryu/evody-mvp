@@ -331,8 +331,14 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                     })}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 items-center text-[8px] text-[var(--c-text-muted)]">
-                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]/35" />{getLabel('beforeShort', locale)}</span>
-                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]" />{getLabel('afterShort', locale)}</span>
+                    <span className="flex items-center gap-1" title={`${getLabel('beforeShort', locale)} (faint)`} aria-label={`${getLabel('beforeShort', locale)} legend`}>
+                      <span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]/35" title={getLabel('beforeShort', locale)} aria-hidden="true" />
+                      {getLabel('beforeShort', locale)}
+                    </span>
+                    <span className="flex items-center gap-1" title={`${getLabel('afterShort', locale)} (solid)`} aria-label={`${getLabel('afterShort', locale)} legend`}>
+                      <span className="inline-block w-3 h-3 rounded-sm bg-[var(--c-accent)]" title={getLabel('afterShort', locale)} aria-hidden="true" />
+                      {getLabel('afterShort', locale)}
+                    </span>
                     <span>{getLabel('deltaNumberLegend', locale)}</span>
                   </div>
                 </div>

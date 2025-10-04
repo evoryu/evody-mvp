@@ -73,3 +73,29 @@ import Ajv from 'ajv';
   }
   console.log('✓ experiments registry unique keys');
 })();
+
+// 4. Experiments analytics tests (spawn node -r ts-node/register)
+(() => {
+  try {
+    const requireFn = createRequire(import.meta.url);
+    const tsNodeRegister = requireFn.resolve('ts-node/register/transpile-only');
+    const res = spawnSync(
+      process.execPath,
+      [
+        '-r',
+        tsNodeRegister,
+        'src/lib/run-experiments-tests.cjs'
+      ],
+      { stdio: 'inherit' }
+    );
+    if (res.status !== 0) {
+      console.error('✗ experiments analytics tests failed');
+      process.exit(res.status ?? 1);
+    }
+    console.log('✓ experiments analytics tests');
+  } catch (e) {
+    console.error('✗ experiments analytics tests failed (spawn error)');
+    console.error(e);
+    process.exit(1);
+  }
+})();
