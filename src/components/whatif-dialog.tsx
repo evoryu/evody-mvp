@@ -304,7 +304,10 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
               {/* Right column */}
               <div className="flex flex-col gap-5">
                 <div>
-                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{horizon}d Bars ({getLabel('afterShort', locale)} diff)</div>
+                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">
+                    {horizon}d Bars ({getLabel('afterShort', locale)} diff)
+                    <InfoHint labelKey="tooltipBarsLegend" portal tail className="ml-1 align-middle" iconSize={12} />
+                  </div>
                   <div className="flex h-24 sm:h-28 items-end gap-1" role="img" aria-label="日次レビュー件数のBefore/After比較バー">
                     {whatIfResult.simulated.days.map((d,i)=>{
                       const before = whatIfResult.original.days[i]?.count || 0
@@ -335,7 +338,10 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                 </div>
                 {/* Sparkline */}
                 <div>
-                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">{getLabel('sparklineTitle', locale)}</div>
+                  <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)]">
+                    {getLabel('sparklineTitle', locale)}
+                    <InfoHint labelKey="tooltipSparklineLegend" portal tail className="ml-1 align-middle" iconSize={12} />
+                  </div>
                   <div className="flex items-center gap-2" role="img" aria-label="ミニ折れ線差分">
                     {(() => {
                       const peak = Math.max(1, whatIfResult.simulated.peak?.count || 1)

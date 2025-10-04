@@ -49,6 +49,8 @@ const JA = {
   afterShort: 'After',
   deltaNumberLegend: '数字=差分',
   sparklineTitle: 'スパークライン (Before→After)',
+  tooltipBarsLegend: 'バー凡例: Before=淡色 / After=濃色。数値は差分(After-Before)。高さはAfterピーク基準で相対化。',
+  tooltipSparklineLegend: 'スパークライン凡例: Before/Afterを隣り合わせのミニバーで表示。下の数値は差分(After-Before)。',
   applyActionTitle: '実際に新カードを導入 (今日の残り枠に従い、余剰は無視)',
   week1: '1週目',
   week2: '2週目',
@@ -169,6 +171,9 @@ const EN: typeof JA = {
   tooltipTimeLoad: 'Time Load: Estimated minutes = median(sec)*count/60 (rounded).',
   tooltipChainSummary: 'Chain Summary: Aggregate impact of chained reappear pattern (e.g., 1/3/7).'
   ,
+  tooltipBarsLegend: 'Bars legend: Before (faint) vs After (solid). Numbers show After-Before. Heights normalized by After peak.',
+  tooltipSparklineLegend: 'Sparkline legend: Paired micro-bars show Before/After; value below is After-Before.',
+  
   // English overrides for badge condition templates
   condition_streak_days: 'Studied for ${n} consecutive days',
   condition_backlog_drop: 'Reduced backlog by ${n}+ cards',
