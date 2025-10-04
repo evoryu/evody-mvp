@@ -35,6 +35,7 @@ export default function DeckDetailPage({ params }: Props) {
     mode: 'replace' | 'merge'
     fileName?: string
   } | null>(null)
+  const [showAllRows, setShowAllRows] = React.useState(false)
 
   const hasMessage = (e: unknown): e is { message: unknown } =>
     typeof e === 'object' && e !== null && 'message' in e
@@ -227,7 +228,36 @@ export default function DeckDetailPage({ params }: Props) {
           <div className="relative z-10 w-[min(720px,92vw)] rounded-xl border bg-[var(--c-bg)] p-5 shadow-xl">
             <h3 className="text-lg font-semibold mb-2">CSV 取り込みの確認</h3>
             <p className="text-sm text-[var(--c-text-secondary)] mb-3">{pending.fileName || '選択ファイル'} を {pending.mode === 'replace' ? '置き換え' : 'マージ'} モードで取り込みます。</p>
-
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="text-[11px] flex items-center gap-2">
+                <input type="checkbox" className="scale-90" checked={showAllRows} onChange={e=> setShowAllRows(e.target.checked)} />
+                全件表示
+              </label>
+              {(pending.invalid.length>0 || pending.duplicates.length>0) && (
+                <button
+                  className="text-[11px] underline text-[var(--c-text-secondary)] hover:text-[var(--c-text)]"
+                  onClick={()=>{
+                    try {
+                      const lines = ['kind,rowNumber,id,reason,raw']
+                      for (const iv of pending.invalid) {
+                        const esc = (s: string)=> '"'+s.replaceAll('"','""')+'"'
+                        lines.push(['invalid', String(iv.rowNumber), '', esc(iv.reason), esc(iv.raw)].join(','))
+                      }
+                      for (const d of pending.duplicates) {
+                        lines.push(['duplicate', '', d, 'duplicate id', ''].join(','))
+                      }
+                      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = (pending.fileName || 'invalid') + '.invalid.csv'
+                      document.body.appendChild(a)
+                      a.click(); a.remove(); URL.revokeObjectURL(url)
+                    } catch {}
+                  }}
+                >無効行レポートをCSVで保存</button>
+              )}
+            </div>
             <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg border p-3">
                 <div className="font-medium mb-1">バリデーション</div>
@@ -274,8 +304,8 @@ export default function DeckDetailPage({ params }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {pending.diff.perRow.slice(0,5).map(({ row, status }) => (
-                    <tr key={row.id} className="border-t">
+                  {(showAllRows ? pending.diff.perRow : pending.diff.perRow.slice(0,5)).map(({ row, status }) => (
+                    <tr key={row.id} className={`border-t ${status==='new' ? 'bg-emerald-50 dark:bg-emerald-950/20' : status==='updated' ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}>
                       <td className="px-2 py-1 font-mono text-xs">{row.id}</td>
                       <td className="px-2 py-1">{row.front}</td>
                       <td className="px-2 py-1">{row.back}</td>
@@ -289,6 +319,11 @@ export default function DeckDetailPage({ params }: Props) {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-1 text-[10px] text-[var(--c-text-muted)] flex flex-wrap gap-3">
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-50 ring-1 ring-emerald-200 dark:bg-emerald-950/20" />新規</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-50 ring-1 ring-blue-200 dark:bg-blue-950/20" />更新</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-transparent ring-1 ring-[var(--c-border)]/60" />変更なし</span>
             </div>
 
             {pending.duplicates.length > 0 && (
