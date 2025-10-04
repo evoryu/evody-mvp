@@ -20,6 +20,16 @@ let allowRetry = true
 let forceSuccess = false
 let clearChecked = false
 
+function getEndpoint(): string {
+  try {
+    // Next.js will inline NEXT_PUBLIC_* at build; ts-node uses runtime env on Node
+    const ep = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_EXP_EVENTS_ENDPOINT) || ''
+    return ep && ep.trim().length > 0 ? ep : '/__exp_exposure'
+  } catch {
+    return '/__exp_exposure'
+  }
+}
+
 function isFiniteNumber(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n)
 }
@@ -106,7 +116,7 @@ function bindExitFlushHandlers() {
       const nav = navigator as Navigator & { sendBeacon?: (url: string, data: BodyInit | null | undefined) => boolean }
       if (nav && typeof nav.sendBeacon === 'function') {
         const payload = JSON.stringify({ type: 'experiment_events', events: buffer })
-        const ok = nav.sendBeacon!('/__exp_exposure', payload)
+        const ok = nav.sendBeacon!(getEndpoint(), payload)
         if (ok) {
           buffer.splice(0, buffer.length)
           persistBuffer()
@@ -146,7 +156,7 @@ function doFlush() {
       return
     }
     if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-      const ok = (navigator as Navigator & { sendBeacon?: (url: string, data: BodyInit | null | undefined) => boolean }).sendBeacon?.('/__exp_exposure', payload)
+      const ok = (navigator as Navigator & { sendBeacon?: (url: string, data: BodyInit | null | undefined) => boolean }).sendBeacon?.(getEndpoint(), payload)
       if (!ok) {
         console.info('[exp][flush:fallback] beacon rejected, re-queue for retry', batch)
         buffer.unshift(...batch)
