@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { use } from 'react'
 import { useToast } from '@/app/toast-context'
-import { countCards, exportDeckToCSV, getDeck, parseDeckCsv, setUserCards, upsertUserCards } from '@/lib/decks'
+import { countCards, exportDeckToCSV, getDeck, parseDeckCsv, setUserCards, upsertUserCards, type ParsedCsvCard } from '@/lib/decks'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -13,6 +13,7 @@ export default function DeckDetailPage({ params }: Props) {
   const { showToast } = useToast()
   const forceRerender = React.useReducer((x: number) => x + 1, 0)[1]
   const [replaceAll, setReplaceAll] = React.useState(false)
+  const [lastImport, setLastImport] = React.useState<{ rows: ParsedCsvCard[]; mode: 'replace'|'merge' } | null>(null)
 
   const hasMessage = (e: unknown): e is { message: unknown } =>
     typeof e === 'object' && e !== null && 'message' in e
@@ -46,6 +47,7 @@ export default function DeckDetailPage({ params }: Props) {
       }
       forceRerender()
       showToast(`CSVから${rows.length}枚を${replaceAll ? '置き換え' : 'マージ'}しました`)
+      setLastImport({ rows, mode: replaceAll ? 'replace' : 'merge' })
     } catch (e) {
       const msg = hasMessage(e) ? String(e.message) : '不明なエラー'
       showToast(`CSVの読み込みに失敗しました: ${msg}`)
@@ -122,6 +124,42 @@ export default function DeckDetailPage({ params }: Props) {
             />
           </div>
           <p className="mt-2 text-xs text-[var(--c-text-muted)]">ヘッダ: id,front,back,example（exampleは任意）</p>
+
+          {lastImport && (
+            <div className="mt-4 rounded-lg border p-3 text-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  直近のインポート: <strong>{lastImport.rows.length}</strong> 枚 ({lastImport.mode === 'replace' ? '置き換え' : 'マージ'})
+                </div>
+                <button
+                  className="text-[11px] underline text-[var(--c-text-muted)] hover:text-[var(--c-text)]"
+                  onClick={()=> setLastImport(null)}
+                >非表示</button>
+              </div>
+              <div className="overflow-auto">
+                <table className="w-full text-left text-[13px]">
+                  <thead className="text-[11px] text-[var(--c-text-secondary)]">
+                    <tr>
+                      <th className="px-2 py-1">id</th>
+                      <th className="px-2 py-1">front</th>
+                      <th className="px-2 py-1">back</th>
+                      <th className="px-2 py-1">example</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lastImport.rows.slice(0,5).map(r => (
+                      <tr key={r.id} className="border-t">
+                        <td className="px-2 py-1 font-mono text-xs">{r.id}</td>
+                        <td className="px-2 py-1">{r.front}</td>
+                        <td className="px-2 py-1">{r.back}</td>
+                        <td className="px-2 py-1 text-[var(--c-text-muted)]">{r.example || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
