@@ -21,7 +21,9 @@ export default function StudySessionPage({ params }: Props) {
   const { deckId } = use(params)                // ← ここで unwrap
   const deck = getDeck(deckId)
   const cards = getDeckCards(deckId)
-  const orderedIds = React.useMemo(()=> getDueIds((cards||[]).map(c=>c.id)), [cards])
+  const allIds = React.useMemo(() => (cards || []).map(c => c.id), [cards])
+  const dueIds = React.useMemo(() => getDueIds(allIds), [allIds])
+  const effectiveIds = dueIds.length ? dueIds : allIds
   const { add } = usePoints()
   const { showToast } = useToast()
   const social = React.useRef<null | ReturnType<typeof useSocial>>(null)
@@ -43,13 +45,16 @@ export default function StudySessionPage({ params }: Props) {
   const revealAtRef = React.useRef<number | null>(null)
 
   // 現在のカード（レンダーおよび onGrade 用）
-  const card = React.useMemo(()=> cards.find(c=> c.id === orderedIds[i])!, [cards, orderedIds, i])
+  const card = React.useMemo(() => {
+    const id = effectiveIds[i]
+    return cards.find(c => c.id === id) || null
+  }, [cards, effectiveIds, i])
 
   const next = React.useCallback(() => {
     setReveal(false)
-    if (i + 1 >= (orderedIds?.length ?? 0)) setDone(true)
+    if (i + 1 >= effectiveIds.length) setDone(true)
     else setI(i + 1)
-  }, [i, orderedIds?.length])
+  }, [i, effectiveIds.length])
 
   const onGrade = React.useCallback((g: Grade) => {
     let singleDelta: number | undefined
@@ -80,7 +85,7 @@ export default function StudySessionPage({ params }: Props) {
       if (!reveal) {
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault()
-          setReveal(true)
+      setReveal(true); revealAtRef.current = Date.now()
         }
         return
       }
@@ -93,7 +98,7 @@ export default function StudySessionPage({ params }: Props) {
     return () => window.removeEventListener('keydown', handle)
   }, [reveal, onGrade])
 
-  const progress = Math.round(((done ? orderedIds.length : i) / (orderedIds.length||1)) * 100)
+  const progress = Math.round(((done ? effectiveIds.length : i) / (effectiveIds.length || 1)) * 100)
 
   // 完了時Episode保存 + 自動投稿
   React.useEffect(() => {
@@ -163,7 +168,7 @@ export default function StudySessionPage({ params }: Props) {
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
                   <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
-                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{orderedIds.length}</div>
+                  <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{effectiveIds.length}</div>
                 </div>
               </div>
             </div>
@@ -197,7 +202,7 @@ export default function StudySessionPage({ params }: Props) {
       <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]">
         <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-sm text-[var(--c-text-muted)]">{i + 1} / {cards.length}</p>
+  <p className="text-sm text-[var(--c-text-muted)]">{Math.min(i + 1, effectiveIds.length)} / {effectiveIds.length}</p>
 
       <motion.div 
         className="task-card overflow-hidden rounded-2xl border p-8 shadow-lg hover:shadow-xl"
@@ -205,7 +210,7 @@ export default function StudySessionPage({ params }: Props) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <p className="font-numeric text-4xl font-bold tracking-tight">{card.front}</p>
+  <p className="font-numeric text-4xl font-bold tracking-tight">{card?.front ?? ''}</p>
 
         <AnimatePresence mode="wait">
           {reveal ? (
@@ -217,8 +222,8 @@ export default function StudySessionPage({ params }: Props) {
               transition={{ duration: 0.2 }}
               className="mt-6 space-y-3"
             >
-              <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card.back}</p>
-              {card.example && (
+              <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card?.back ?? ''}</p>
+              {card?.example && (
                 <p className="border-l-2 pl-4 text-[15px] leading-relaxed text-[var(--c-text-secondary)] border-[var(--c-border)] dark:border-[var(--c-border-strong)]">
                   例）{card.example}
                 </p>
