@@ -351,6 +351,7 @@ export default function ProfilePage() {
             </div>
             <div className="text-center">
               <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">今日のポイント</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats?.points ?? 0}pt</div>
               {/* What-if Dialog (portal-like overlay) */}
               {showWhatIf && whatIfResult && (
                 <WhatIfDialog
