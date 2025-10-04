@@ -124,6 +124,7 @@ const JA = {
   ,tooltipRetentionMetric: '定着率: 直近7日で Good / Easy 判定となったレビュー割合 (Again 除外)。短期変動があるため閾値段階化。'
   ,tooltipReactionVariability: '反応ばらつき指数: 反応時間の散らばり度合い (低いほど安定)。内部的には上位/中央値比などの合成指標。'
   ,tooltipReactionMedian: '反応時間中央値: 直近の学習反応時間 (秒) の中央値。改善は効率向上を示唆。'
+  ,tooltipAddedCardsCount: '追加カード数: シミュレーションで追加する新規カード枚数 (1日あたりの導入想定)。'
   // Inverse metric progress (Achievements)
   ,tooltipTailIndexInverse: '反応ばらつき指数 (低いほど良い): 現在値が閾値以下で条件達成。バー=閾値/現在 (最大1)。'
   ,tooltipFlattenInverse: 'Flatten 指標 (低いほど平坦): 現在値が閾値以下で達成。バー=閾値/現在 (最大1)。1.0 に近いほどピーク突出が小。'
@@ -184,6 +185,7 @@ const EN: typeof JA = {
   ,tooltipReactionMedian: 'Median Reaction Time: Median seconds per recent review. Improvement suggests efficiency gains.'
   ,tooltipTailIndexInverse: 'Reaction Variability (lower is better). Goal achieved when current ≤ target. Bar = target/current (clamped to 1).'
   ,tooltipFlattenInverse: 'Flatten (lower = flatter). Achieved when current ≤ target. Bar = target/current (clamped). Closer to 1 baseline = flatter schedule.'
+  ,tooltipAddedCardsCount: 'Added cards: Number of new cards to introduce in the simulation (per day assumption).'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;

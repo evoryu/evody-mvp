@@ -155,12 +155,12 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
               {/* Left column */}
               <div className="flex flex-col gap-6">
                 <div className="space-y-2">
-                    <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">{getLabel('addedCardsCount', locale)}
+                    <label className="text-[11px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2 flex-wrap">{getLabel('addedCardsCount', locale)} <InfoHint labelKey="tooltipAddedCardsCount" portal tail iconSize={12} className="-mt-0.5" />
                     <input type="number" aria-label="追加新カード数入力" value={whatIfN} min={0} max={Math.max(10, (adaptive?.final||5)*2)} onChange={e=>{
                       const v = parseInt(e.target.value,10); if (!Number.isNaN(v)) setWhatIfN(Math.max(0, Math.min(200, v)))
                     }} className="w-24 rounded border bg-transparent px-2 py-1 text-[12px]" />
                     <input type="range" aria-label="追加新カード数スライダー" value={whatIfN} min={0} max={Math.max(10, (adaptive?.final||5)*2)} onChange={e=> setWhatIfN(parseInt(e.target.value,10))} className="flex-1" />
-                    <select aria-label="デッキ選択" value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]">
+                    <select aria-label="デッキ選択" value={whatIfDeck} onChange={e=> setWhatIfDeck(e.target.value)} className="ml-2 rounded border bg-transparent px-2 py-1 text-[11px]" title={getLabel('allDecks', locale)}>
                       <option value="ALL">{getLabel('allDecks', locale)}</option>
                       {ext?.decks?.map((d: { deckId: string })=> (
                         <option key={d.deckId} value={d.deckId}>{d.deckId}</option>
@@ -171,7 +171,7 @@ export function WhatIfDialog(props: WhatIfDialogProps) {
                     {whatIfChained ? getLabel('assumptionChained', locale) : getLabel('assumptionSingle', locale)}
                   </div>
                   <div className="flex items-center gap-2 pt-1">
-                    <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
+                    <label className="flex items-center gap-1 text-[10px] cursor-pointer select-none" title={getLabel('addPattern', locale)}>
                       <input type="checkbox" aria-label="追加パターン (連続再出現) 切替" checked={whatIfChained} onChange={e=> setWhatIfChained(e.target.checked)} className="scale-90" />
                       <span>{getLabel('addPattern', locale)} ({chainPreset==='standard'?'1/3/7': chainPreset==='fast'?'1/2/5': chainPreset==='gentle'?'2/5/9':'3/7'})</span>
                       {whatIfChained && (
