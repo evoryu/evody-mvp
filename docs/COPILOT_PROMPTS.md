@@ -12,4 +12,4 @@
 - "Add i18n toggle persistence and query sync (LocaleProvider already supports ?lang and cookie)"
 - "Polish What-if dialog tooltips using InfoHint and labels.ts keys (tooltip* and info* keys)"
 - "Write unit tests for experiments analytics backoff/TTL/persistence"
- - "Add CSV import validation and preview diff (new/updated/invalid breakdown) with confirmation modal"
+- "Add CSV import validation and preview diff (new/updated/invalid breakdown) with confirmation modal"
