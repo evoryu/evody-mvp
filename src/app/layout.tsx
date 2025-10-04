@@ -5,6 +5,7 @@ import { Noto_Sans_JP, Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Avatar from '@/components/avatar'
 import { PointsBadge } from '@/components/points-badge'
+import { PointsToaster } from '@/components/points-toaster'
 import { PointsProvider } from './points-context'
 import { ToastProvider } from './toast-context'
 import { LocaleProvider } from './locale-context'
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PointsProvider>
           <ToastProvider>
             <BadgesProvider>
+            <PointsToaster />
             <BadgeRegistryLoader />
             {/* ヘッダー */}
             <header className="sticky top-0 z-50 border-b border-[var(--c-border)] bg-[var(--c-surface)]/80 backdrop-blur">

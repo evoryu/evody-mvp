@@ -24,7 +24,17 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('evody:points', String(points))
   }, [points])
 
-  const add = (delta: number) => setPoints(p => Math.max(0, p + delta))
+  const add = (delta: number) => {
+    setPoints(p => {
+      const next = Math.max(0, p + delta)
+      try {
+        if (typeof window !== 'undefined' && delta > 0) {
+          window.dispatchEvent(new CustomEvent('evody:points:add', { detail: { delta } }))
+        }
+      } catch { /* ignore */ }
+      return next
+    })
+  }
   const reset = () => setPoints(0)
 
   return <Ctx.Provider value={{ points, add, reset }}>{children}</Ctx.Provider>

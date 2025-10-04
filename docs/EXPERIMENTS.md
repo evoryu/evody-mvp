@@ -10,6 +10,12 @@
 - 実装コスト最小のまま、将来のイベント収集 / 分析基盤へ拡張可能な構造
 - デターミニスティック (同じ subject は同じ variant) で再現性を担保
 
+##### ブラウザ終了時の取りこぼし低減
+
+- `visibilitychange`(hidden), `pagehide`, `beforeunload` で即時 flush を試行します。
+- 可能なら `navigator.sendBeacon` を使い、成功時はバッファをクリアして backoff 状態をリセットします。
+- Node/テスト環境や beacon 不可な環境では通常フローでの flush を呼び出し、再送に委ねます。
+
 ## 2. 現状コンポーネント
 
 | レイヤ           | ファイル                      | 役割                                                                   |

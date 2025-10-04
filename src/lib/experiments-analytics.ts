@@ -77,6 +77,41 @@ function maybeClearFromQuery() {
 }
 maybeClearFromQuery()
 
+// Attempt to flush on page visibility/unload to reduce drop at exit
+function bindExitFlushHandlers() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+  const tryBeaconFlush = () => {
+    try {
+      if (!buffer.length) return
+      // Prefer sendBeacon for unload-safe delivery
+      const nav = navigator as Navigator & { sendBeacon?: (url: string, data: BodyInit | null | undefined) => boolean }
+      if (nav && typeof nav.sendBeacon === 'function') {
+        const payload = JSON.stringify({ type: 'experiment_events', events: buffer })
+        const ok = nav.sendBeacon!('/__exp_exposure', payload)
+        if (ok) {
+          buffer.splice(0, buffer.length)
+          persistBuffer()
+          markSuccess()
+          return
+        }
+      }
+      // Fallback to normal flush path
+      doFlush()
+    } catch { /* ignore */ }
+  }
+  const onVisibility = () => {
+    try {
+      if ((document as Document & { visibilityState?: string }).visibilityState === 'hidden') {
+        tryBeaconFlush()
+      }
+    } catch { /* ignore */ }
+  }
+  document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('pagehide', tryBeaconFlush)
+  window.addEventListener('beforeunload', tryBeaconFlush)
+}
+bindExitFlushHandlers()
+
 function doFlush() {
   pruneOldEvents()
   if (!buffer.length) { scheduled = false; return }
@@ -166,6 +201,8 @@ export function _resetForTest() {
   scheduled = false
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
   retryAttempt = 0
+  allowRetry = true
+  forceSuccess = false
   try { if (hasLocalStorage()) window.localStorage.removeItem(LS_KEY) } catch { /* ignore */ }
 }
 export function _disableRetryForTest() { allowRetry = false; if (retryTimer) { clearTimeout(retryTimer); retryTimer = null } }
