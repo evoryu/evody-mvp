@@ -6,6 +6,7 @@ require('./experiments.analytics.ttl.test')
 require('./experiments.analytics.backoff.test')
 require('./experiments.analytics.exit-flush.test')
 require('./experiments.analytics.force-success.test')
+require('./experiments.analytics.validation.test')
 setTimeout(()=>{
   if (process.exitCode && process.exitCode !== 0) {
     console.error('\nSome experiment analytics tests failed.')

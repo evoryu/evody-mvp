@@ -20,6 +20,27 @@ let allowRetry = true
 let forceSuccess = false
 let clearChecked = false
 
+function isFiniteNumber(n: unknown): n is number {
+  return typeof n === 'number' && Number.isFinite(n)
+}
+
+function isExperimentEvent(ev: unknown): ev is ExperimentEvent {
+  if (!ev || typeof ev !== 'object') return false
+  const o = ev as Record<string, unknown>
+  if (typeof o.type !== 'string') return false
+  if (!isFiniteNumber(o.ts)) return false
+  if (o.type === 'exposure') {
+    return typeof o.key === 'string' && typeof o.variant === 'string'
+  }
+  if (o.type === 'conversion') {
+    if (typeof o.key !== 'string' || typeof o.metric !== 'string') return false
+    if (o.variant != null && typeof o.variant !== 'string') return false
+    if (o.value != null && !isFiniteNumber(o.value)) return false
+    return true
+  }
+  return false
+}
+
 function markSuccess() {
   // 成功したフラッシュ後はバックオフ状態をリセット
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
@@ -53,9 +74,7 @@ function restoreBuffer() {
     const arr: unknown = JSON.parse(raw)
     if (Array.isArray(arr)) {
       for (const ev of arr) {
-        if (ev && typeof ev === 'object' && 'type' in ev) {
-          buffer.push(ev as ExperimentEvent)
-        }
+        if (isExperimentEvent(ev)) buffer.push(ev)
       }
     }
   } catch { /* ignore */ }
