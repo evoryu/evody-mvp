@@ -307,3 +307,31 @@ https://localhost:3000/achievements?exp.progress_detail_format=variantB
 - 明示的クリア用デバッグパラメータ `?exp.clear=1`
 - override 使用中の UI インジケータ (バナー / コンソール warn)
 - weight TTL / ダイナミック再配分 (段階 rollout)
+
+---
+
+## Appendix: 実験アナリティクス テストの実行方法 (追加)
+
+ローカルで実験アナリティクスのスモークテストを一括実行するには次を利用します。
+
+実行:
+
+```bash
+npm run test:experiments
+```
+
+内部では Node に `ts-node` を事前ロードし、`src/lib/run-experiments-tests.cjs` から以下の TS テストを順次実行します:
+
+- `experiments.analytics.test.ts` (バッファ蓄積/即時フラッシュ)
+- `experiments.analytics.persistence.test.ts` (localStorage 永続化/復元)
+- `experiments.analytics.ttl.test.ts` (24h TTL prune)
+- `experiments.analytics.backoff.test.ts`（指数バックオフと上限キャップ/成功時リセット）
+- `experiments.analytics.exit-flush.test.ts`（exit/visibility 経路の挙動）
+- `experiments.analytics.force-success.test.ts`（強制成功フラグでの成功パス）
+
+補助フラグ:
+
+- `_forceFlushSuccessForTest(true)`: beacon 有無に関わらず flush を成功扱いにし、バッファを空にして backoff をリセット。
+- `?exp.clear=1`: ブラウザでロード時にバッファと localStorage のイベントを消去。
+
+CI では `scripts/ci-validate.ts` から上記ランナーを呼び出すため、PR 時にも自動実行されます。
