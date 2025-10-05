@@ -185,6 +185,18 @@ const JA = {
   , guidanceAgainHighBody: 'Again率が高めです。記憶がまだ不安定かもしれません。ペースを少し落として確実に想起しましょう。'
   , guidanceStruggleBody: 'Hard/Again が多めです。集中が落ちているかカードが難しすぎる可能性。短い休憩や環境調整を挟むと retention が改善します。'
   , cardMissing: '(カード欠損)'
+  ,
+  // --- Tasks page ---
+  tasksTitle: 'タスク'
+  , tasksTitlePlaceholder: 'タイトル（例：英単語30個）'
+  , tasksSubjectPlaceholder: '科目（例：英語）'
+  , tasksMinutesPlaceholder: '所要（分）'
+  , actionAdd: '追加'
+  , actionDelete: '削除'
+  , tasksEmptyHint: 'まだタスクがありません。上のフォームから追加してね。'
+  , minutesSuffix: '分'
+  , commonDash: '—'
+  , toastTaskCompletedPoints: 'タスク完了で {points}pt 獲得！'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -302,6 +314,18 @@ const EN: typeof JA = {
   , guidanceAgainHighBody: 'High Again rate suggests unstable recall. Slow the pace slightly for more reliable retrieval.'
   , guidanceStruggleBody: 'Many Hard/Again may mean fatigue or overly difficult cards. A short break or environment change can improve retention.'
   , cardMissing: '(missing card)'
+  ,
+  // --- Tasks page ---
+  tasksTitle: 'Tasks'
+  , tasksTitlePlaceholder: 'Title (e.g., 30 English words)'
+  , tasksSubjectPlaceholder: 'Subject (e.g., English)'
+  , tasksMinutesPlaceholder: 'Duration (min)'
+  , actionAdd: 'Add'
+  , actionDelete: 'Delete'
+  , tasksEmptyHint: 'No tasks yet. Add one using the form above.'
+  , minutesSuffix: 'min'
+  , commonDash: '—'
+  , toastTaskCompletedPoints: 'Gained {points}pt for task completion!'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;

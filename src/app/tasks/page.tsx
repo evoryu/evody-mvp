@@ -3,6 +3,8 @@
 import React from 'react'
 import { usePoints } from '../points-context'
 import { useToast } from '../toast-context'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 
 
 type Task = {
@@ -14,6 +16,7 @@ type Task = {
 }
 
 export default function TasksPage() {
+  const locale = useLocale()
   const { add } = usePoints()
   const { showToast } = useToast()
   const [tasks, setTasks] = React.useState<Task[]>([])
@@ -77,7 +80,7 @@ const toggleDone = (id: string) => {
   // 4) 最後にポイントを加算/減算（イベントハンドラ側なので二重にならない）
   add(delta)
   if (nowDone) {
-    showToast(`タスク完了で ${pts}pt 獲得！`)
+    showToast(getLabel('toastTaskCompletedPoints', locale).replace('{points}', String(pts)))
   }
 }
 
@@ -87,28 +90,28 @@ const toggleDone = (id: string) => {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+  <h1 className="text-3xl font-bold tracking-tight">{getLabel('tasksTitle', locale)}</h1>
 
       {/* 追加フォーム */}
       <form onSubmit={addTask} className="task-card rounded-xl border p-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-3">
           <input
             className="form-field"
-            placeholder="タイトル（例：英単語30個）"
+            placeholder={getLabel('tasksTitlePlaceholder', locale)}
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
         {/* subject */}
           <input
             className="form-field"
-            placeholder="科目（例：英語）"
+            placeholder={getLabel('tasksSubjectPlaceholder', locale)}
             value={subject}
             onChange={e => setSubject(e.target.value)}
           />
         {/* minutes */}
           <input
             className="form-field"
-            placeholder="所要（分）"
+            placeholder={getLabel('tasksMinutesPlaceholder', locale)}
             inputMode="numeric"
             value={minutes}
             onChange={e => {
@@ -118,14 +121,14 @@ const toggleDone = (id: string) => {
           />
         </div>
         <button type="submit" className="action-button rounded-xl px-5 py-2 font-medium">
-          追加
+          {getLabel('actionAdd', locale)}
         </button>
       </form>
 
       {/* 一覧 */}
       <ul className="space-y-3">
         {tasks.length === 0 && (
-          <li className="text-[var(--c-text-muted)]">まだタスクがありません。上のフォームから追加してね。</li>
+          <li className="text-[var(--c-text-muted)]">{getLabel('tasksEmptyHint', locale)}</li>
         )}
         {tasks.map(t => (
           <li key={t.id} className="task-card rounded-xl border p-4">
@@ -142,7 +145,7 @@ const toggleDone = (id: string) => {
                     {t.title}
                   </p>
                   <p className="text-sm text-[var(--c-text-muted)]">
-                    {t.subject || '—'} ・ {t.minutes ? `${t.minutes}分` : '—'}
+                    {(t.subject && t.subject.trim()) ? t.subject : getLabel('commonDash', locale)} ・ {t.minutes ? `${t.minutes}${getLabel('minutesSuffix', locale)}` : getLabel('commonDash', locale)}
                   </p>
                 </div>
               </label>
@@ -150,7 +153,7 @@ const toggleDone = (id: string) => {
                 onClick={() => removeTask(t.id)}
                 className="btn-secondary px-3 py-1 text-sm"
               >
-                削除
+                {getLabel('actionDelete', locale)}
               </button>
             </div>
           </li>
