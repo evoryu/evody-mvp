@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import Script from 'next/script'
 import { Noto_Sans_JP, Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Avatar from '@/components/avatar'
@@ -43,6 +44,28 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ja" className={`${notoSansJP.variable} ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light" />
+        {/* 初期描画前に <html lang> を同期（?lang/localStorage/cookie） */}
+        <Script id="lang-init" strategy="beforeInteractive">{`
+          (function(){
+            try{
+              var lang = (function(){
+                var sp = new URLSearchParams(window.location.search);
+                var q = sp.get('lang');
+                if(q==='ja'||q==='en') return q;
+                try {
+                  var v = localStorage.getItem('evody:lang');
+                  if(v==='ja'||v==='en') return v;
+                } catch(e){}
+                try {
+                  var ck = (document.cookie||'').split(';').map(function(s){return s.trim()}).find(function(s){return s.indexOf('evody:lang=')===0});
+                  if(ck){ var c = ck.split('=')[1]; if(c==='ja'||c==='en') return c; }
+                } catch(e){}
+                return null;
+              })();
+              if(lang) document.documentElement.setAttribute('lang', lang);
+            }catch(e){}
+          })();
+        `}</Script>
       </head>
   <body className="min-h-dvh bg-[var(--c-bg)] text-[15px] antialiased">
         <LocaleProvider>
