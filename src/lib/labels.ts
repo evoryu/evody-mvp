@@ -149,6 +149,13 @@ const JA = {
   , retention7d: '7d Retention'
   , retentionModeCardsShort: '(p=cards)'
   , actionResetPoints: 'ポイントをリセット'
+  ,
+  // --- Decks page ---
+  decksTitle: 'デッキ一覧'
+  , decksIntro: '全てのデッキ一覧から、学習したいデッキを選んで学習を始めましょう'
+  , startStudyAction: '学習を開始'
+  , cardsSuffix: '枚'
+  , ariaViewDeckDetails: '{name}の詳細を見る'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -230,6 +237,13 @@ const EN: typeof JA = {
   , retentionModeCardsShort: '(p=cards)'
   , actionResetPoints: 'Reset points'
   , allDecks: 'All Decks'
+  ,
+  // --- Decks page ---
+  decksTitle: 'Decks'
+  , decksIntro: 'Browse all decks and pick one to start studying.'
+  , startStudyAction: 'Start studying'
+  , cardsSuffix: ' cards'
+  , ariaViewDeckDetails: 'View details of {name}'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;

@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import type { Deck } from '@/lib/decks'
 import { countCards } from '@/lib/decks'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 
 export default function DeckCard({ deck, index = 0 }: { deck: Deck; index?: number }) {
+  const locale = useLocale()
   return (
     <motion.li
       initial={{ opacity: 0, y: 20 }}
@@ -16,7 +19,7 @@ export default function DeckCard({ deck, index = 0 }: { deck: Deck; index?: numb
         <Link 
           href={`/decks/${deck.id}`}
           className="absolute inset-0 z-20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
-          aria-label={`${deck.name}の詳細を見る`}
+          aria-label={getLabel('ariaViewDeckDetails', locale).replace('{name}', deck.name)}
         />
 
         <div className="flex items-start justify-between gap-4">
@@ -31,7 +34,7 @@ export default function DeckCard({ deck, index = 0 }: { deck: Deck; index?: numb
             )}
           </div>
           <div className="task-input flex items-center rounded-lg px-3 py-1 text-sm font-medium">
-            {countCards(deck.id)}枚
+            {countCards(deck.id)}{getLabel('cardsSuffix', locale)}
           </div>
         </div>
 
@@ -58,7 +61,7 @@ export default function DeckCard({ deck, index = 0 }: { deck: Deck; index?: numb
               <path d="M3.196 8.87l-.825.483a.75.75 0 000 1.294l7.25 4.25a.75.75 0 00.758 0l7.25-4.25a.75.75 0 000-1.294l-.825-.484-5.666 3.322a2.25 2.25 0 01-2.276 0L3.196 8.87z" />
               <path d="M10.38 1.103a.75.75 0 00-.76 0l-7.25 4.25a.75.75 0 000 1.294l7.25 4.25a.75.75 0 00.76 0l7.25-4.25a.75.75 0 000-1.294l-7.25-4.25z" />
             </svg>
-            <span className="relative z-10">学習を開始</span>
+            <span className="relative z-10">{getLabel('startStudyAction', locale)}</span>
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 transition-opacity group-hover/button:opacity-100 dark:from-blue-500 dark:to-cyan-400" />
           </Link>
         </div>

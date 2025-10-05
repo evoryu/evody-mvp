@@ -3,14 +3,17 @@
 import { DECKS } from '@/lib/decks'
 import { motion } from 'framer-motion'
 import DeckCard from '@/components/deck-card'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 
 export default function DecksPage() {
+  const locale = useLocale()
   return (
     <section className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">デッキ一覧</h1>
-  <p className="text-[15px] text-[var(--c-text-secondary)]">
-          全てのデッキ一覧から、学習したいデッキを選んで学習を始めましょう
+        <h1 className="text-3xl font-bold tracking-tight">{getLabel('decksTitle', locale)}</h1>
+        <p className="text-[15px] text-[var(--c-text-secondary)]">
+          {getLabel('decksIntro', locale)}
         </p>
       </div>
 

@@ -12,7 +12,7 @@
 - `evody:username` … string
 - `evody:avatarV1` … dataURL
 - `evody:daily` … Record<YYYY-MM-DD, number>（1日の達成数）
- - `evody:lang` … 'ja' | 'en'（ロケール）
+- `evody:lang` … 'ja' | 'en'（ロケール）
 
 ## 型
 
