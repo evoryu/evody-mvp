@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { saveEpisode, formatEpisodePost } from '@/lib/episodes'
 import { getDueIds, schedule } from '@/lib/srs'
 import { logReview } from '@/lib/reviews'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 import { useSocial } from '@/app/social-context'
 
 // ダミーカード（あとでデッキから差し替え可能）
@@ -26,6 +28,7 @@ const SCORE = { Again: 0, Hard: 3, Good: 6, Easy: 8 } as const
 type Grade = keyof typeof SCORE
 
 export default function QuickStudyPage() {
+  const locale = useLocale()
   const { add } = usePoints()
   const { showToast } = useToast()
   const social = React.useRef<null | ReturnType<typeof useSocial>>(null)
@@ -82,9 +85,13 @@ export default function QuickStudyPage() {
         schedule(card.id, g)
       }
     } catch {}
-    showToast(`${g}評価で ${pts}pt 獲得！`)
+    showToast(
+      getLabel('toastGainedPoints', locale)
+        .replace('{grade}', g)
+        .replace('{points}', String(pts))
+    )
     next()
-  }, [add, next, showToast, card])
+  }, [add, next, showToast, card, locale])
 
   React.useEffect(() => {
     if (doneRef.current) return
@@ -123,15 +130,15 @@ export default function QuickStudyPage() {
       const flag = localStorage.getItem('evody:autoPostEpisodes')
       if (flag === '1' && social.current) {
         social.current.create(formatEpisodePost(ep))
-        showToast('学習完了をフィードに投稿しました')
+        showToast(getLabel('toastPostedToFeed', locale))
       }
     } catch { /* ignore */ }
-  }, [done, startedAt, earned, showToast])
+  }, [done, startedAt, earned, showToast, locale])
 
   if (done) {
     return (
       <section className="space-y-6">
-        <h1 className="text-2xl font-bold">Quick Study</h1>
+  <h1 className="text-2xl font-bold">{getLabel('quickStudyTitle', locale)}</h1>
         <motion.div
           className="overflow-hidden rounded-2xl border bg-[var(--c-surface)]/80 shadow-lg backdrop-blur"
           initial={{ opacity: 0, y: 20 }}
@@ -148,7 +155,7 @@ export default function QuickStudyPage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="text-xl font-bold">セッション完了！</h2>
+              <h2 className="text-xl font-bold">{getLabel('studyCompleteTitle', locale)}</h2>
             </motion.div>
             <motion.p
               initial={{ y: 20, opacity: 0 }}
@@ -156,7 +163,7 @@ export default function QuickStudyPage() {
               transition={{ delay: 0.3 }}
               className="text-center text-[var(--c-text-secondary)] text-sm"
             >
-              お疲れさまです。継続が定着の近道です。
+              {getLabel('studyCompleteBody', locale)}
             </motion.p>
           </div>
           <motion.div
@@ -168,20 +175,20 @@ export default function QuickStudyPage() {
             <div className="flex items-center justify-center gap-6">
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
-                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">獲得ポイント</div>
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('studyEarnedPoints', locale)}</div>
                   <div className="mt-1 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{earned}</div>
                 </div>
               </div>
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
-                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('studyStudiedCards', locale)}</div>
                   <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{effectiveIds.length}</div>
                 </div>
               </div>
             </div>
             <div className="mt-6 flex gap-3">
               <Link href="/decks" className="btn-secondary flex-1 group/button">
-                <span>デッキ一覧へ</span>
+                <span>{getLabel('actionBackToDecks', locale)}</span>
                 <div className="btn-overlay" />
               </Link>
               <button
@@ -192,7 +199,7 @@ export default function QuickStudyPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
                 </svg>
-                もう一度
+                {getLabel('actionStudyAgain', locale)}
                 <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover/button:opacity-100 dark:bg-white/15" />
               </button>
             </div>
@@ -204,7 +211,7 @@ export default function QuickStudyPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Quick Study</h1>
+  <h1 className="text-3xl font-bold tracking-tight">{getLabel('quickStudyTitle', locale)}</h1>
       <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]">
         <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
@@ -230,7 +237,7 @@ export default function QuickStudyPage() {
               <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card?.back ?? ''}</p>
               {card?.example && (
                 <p className="task-input rounded-lg border px-4 py-3 text-[15px] leading-relaxed">
-                  例）{card.example}
+                  {getLabel('studyExamplePrefix', locale)}{card.example}
                 </p>
               )}
             </motion.div>
@@ -242,7 +249,7 @@ export default function QuickStudyPage() {
               exit={{ opacity: 0 }}
               className="mt-4 text-[15px] font-medium leading-relaxed text-[var(--c-text-muted)]"
             >
-              答えを見るには「Reveal」を押すか、スペースキーを押してください
+              {getLabel('studyRevealHint', locale)}
             </motion.p>
           )}
         </AnimatePresence>
@@ -265,7 +272,7 @@ export default function QuickStudyPage() {
                   <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
                   <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                 </svg>
-                <span>Reveal</span>
+                <span>{getLabel('actionReveal', locale)}</span>
                 <span className="ml-1 opacity-60">[Space]</span>
               </span>
             </motion.button>
@@ -281,7 +288,7 @@ export default function QuickStudyPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v8.5A2.25 2.25 0 0115.75 15h-3.105a3.501 3.501 0 001.1 1.677A.75.75 0 0113.26 18H6.74a.75.75 0 01-.484-1.323A3.501 3.501 0 007.355 15H4.25A2.25 2.25 0 012 12.75v-8.5zm1.5 0a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v7.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-7.5z" clipRule="evenodd" />
                 </svg>
-                <span>キーボードショートカット:</span>
+                <span>{getLabel('keyboardShortcuts', locale)}</span>
                 <kbd className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-200">1</kbd>
                 <span>Again</span>
                 <span>/</span>

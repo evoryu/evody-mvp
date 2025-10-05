@@ -9,6 +9,8 @@ import { GradeButton as ImportedGradeButton } from '@/components/grade-button'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { saveEpisode, formatEpisodePost } from '@/lib/episodes'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 import { logReview } from '@/lib/reviews'
 import { useSocial } from '@/app/social-context'
 
@@ -18,6 +20,7 @@ const SCORE = { Again: 0, Hard: 3, Good: 6, Easy: 8 } as const
 type Grade = keyof typeof SCORE
 
 export default function StudySessionPage({ params }: Props) {
+  const locale = useLocale()
   const { deckId } = use(params)                // ← ここで unwrap
   const deck = getDeck(deckId)
   const cards = getDeckCards(deckId)
@@ -74,9 +77,13 @@ export default function StudySessionPage({ params }: Props) {
         schedule(card.id, g)
       }
     } catch {}
-    showToast(`${g}評価で ${pts}pt 獲得！`)
+    showToast(
+      getLabel('toastGainedPoints', locale)
+        .replace('{grade}', g)
+        .replace('{points}', String(pts))
+    )
     next()
-  }, [add, next, showToast, card, deckId])
+  }, [add, next, showToast, card, deckId, locale])
 
   // キーボードショートカットのハンドラ
   React.useEffect(() => {
@@ -117,13 +124,13 @@ export default function StudySessionPage({ params }: Props) {
       const flag = localStorage.getItem('evody:autoPostEpisodes')
       if (flag === '1' && social.current) {
         social.current.create(formatEpisodePost(ep))
-        showToast('学習完了をフィードに投稿しました')
+        showToast(getLabel('toastPostedToFeed', locale))
       }
     } catch {}
-  }, [done, deck, deckId, startedAt, earned, showToast])
+  }, [done, deck, deckId, startedAt, earned, showToast, locale])
 
   if (!deck || cards.length === 0) {
-    return <p className="text-red-600">デッキが見つからないか、カードがありません。</p>
+    return <p className="text-red-600">{getLabel('deckNotFoundOrEmpty', locale)}</p>
   }
 
   if (done) {
@@ -146,7 +153,7 @@ export default function StudySessionPage({ params }: Props) {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="text-xl font-bold">セッション完了！</h2>
+              <h2 className="text-xl font-bold">{getLabel('studyCompleteTitle', locale)}</h2>
             </motion.div>
             <motion.p
               initial={{ y: 20, opacity: 0 }}
@@ -154,27 +161,27 @@ export default function StudySessionPage({ params }: Props) {
               transition={{ delay: 0.3 }}
               className="text-center text-sm text-[var(--c-text-secondary)]"
             >
-              お疲れさまです。継続が定着の近道です。
+              {getLabel('studyCompleteBody', locale)}
             </motion.p>
           </div>
           <motion.div className="space-y-4 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
             <div className="flex items-center justify-center gap-6">
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
-                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">獲得ポイント</div>
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('studyEarnedPoints', locale)}</div>
                   <div className="mt-1 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{earned}</div>
                 </div>
               </div>
               <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
                 <div className="text-center">
-                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">学習カード</div>
+                  <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('studyStudiedCards', locale)}</div>
                   <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{effectiveIds.length}</div>
                 </div>
               </div>
             </div>
             <div className="mt-6 flex gap-3">
               <Link href="/decks" className="btn-secondary flex-1 group/button">
-                <span>デッキ一覧へ</span>
+                <span>{getLabel('actionBackToDecks', locale)}</span>
                 <div className="btn-overlay" />
               </Link>
               <button
@@ -185,7 +192,7 @@ export default function StudySessionPage({ params }: Props) {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
                 </svg>
-                もう一度
+                {getLabel('actionStudyAgain', locale)}
                 <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover/button:opacity-100 dark:bg-white/15" />
               </button>
             </div>
@@ -225,7 +232,7 @@ export default function StudySessionPage({ params }: Props) {
               <p className="text-2xl font-bold tracking-tight" style={{ letterSpacing: '-0.02em' }}>{card?.back ?? ''}</p>
               {card?.example && (
                 <p className="border-l-2 pl-4 text-[15px] leading-relaxed text-[var(--c-text-secondary)] border-[var(--c-border)] dark:border-[var(--c-border-strong)]">
-                  例）{card.example}
+                  {getLabel('studyExamplePrefix', locale)}{card.example}
                 </p>
               )}
             </motion.div>
@@ -237,7 +244,7 @@ export default function StudySessionPage({ params }: Props) {
               exit={{ opacity: 0 }}
               className="mt-4 text-[15px] font-medium leading-relaxed text-[var(--c-text-muted)]"
             >
-              答えを見るには「Reveal」を押すか、スペースキーを押してください
+              {getLabel('studyRevealHint', locale)}
             </motion.p>
           )}
         </AnimatePresence>
@@ -260,7 +267,7 @@ export default function StudySessionPage({ params }: Props) {
                   <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
                   <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                 </svg>
-                Reveal
+                {getLabel('actionReveal', locale)}
                 <span className="ml-1 text-white/60 dark:text-gray-900/60">[Space]</span>
               </span>
               <motion.div
@@ -278,7 +285,7 @@ export default function StudySessionPage({ params }: Props) {
                 <ImportedGradeButton label="Easy" onClick={() => onGrade('Easy')} />
               </div>
               <p className="text-sm text-[var(--c-text-muted)]">
-                キーボードショートカット: 1: Again / 2: Hard / 3: Good / 4: Easy
+                {getLabel('keyboardShortcuts', locale)} 1: Again / 2: Hard / 3: Good / 4: Easy
               </p>
             </div>
           )}

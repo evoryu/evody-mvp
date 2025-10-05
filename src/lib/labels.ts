@@ -156,6 +156,22 @@ const JA = {
   , startStudyAction: '学習を開始'
   , cardsSuffix: '枚'
   , ariaViewDeckDetails: '{name}の詳細を見る'
+  ,
+  // --- Study pages ---
+  studyRevealHint: '答えを見るには「Reveal」を押すか、スペースキーを押してください'
+  , studyExamplePrefix: '例）'
+  , studyCompleteTitle: 'セッション完了！'
+  , studyCompleteBody: 'お疲れさまです。継続が定着の近道です。'
+  , studyEarnedPoints: '獲得ポイント'
+  , studyStudiedCards: '学習カード'
+  , actionBackToDecks: 'デッキ一覧へ'
+  , actionStudyAgain: 'もう一度'
+  , actionReveal: 'Reveal'
+  , keyboardShortcuts: 'キーボードショートカット:'
+  , toastPostedToFeed: '学習完了をフィードに投稿しました'
+  , toastGainedPoints: '{grade}評価で {points}pt 獲得！'
+  , deckNotFoundOrEmpty: 'デッキが見つからないか、カードがありません。'
+  , quickStudyTitle: 'Quick Study'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -244,6 +260,22 @@ const EN: typeof JA = {
   , startStudyAction: 'Start studying'
   , cardsSuffix: ' cards'
   , ariaViewDeckDetails: 'View details of {name}'
+  ,
+  // --- Study pages ---
+  studyRevealHint: 'Press "Reveal" or Space to see the answer'
+  , studyExamplePrefix: 'e.g., '
+  , studyCompleteTitle: 'Session complete!'
+  , studyCompleteBody: 'Nice work. Consistency builds retention.'
+  , studyEarnedPoints: 'Points earned'
+  , studyStudiedCards: 'Cards studied'
+  , actionBackToDecks: 'Back to Decks'
+  , actionStudyAgain: 'Study again'
+  , actionReveal: 'Reveal'
+  , keyboardShortcuts: 'Keyboard shortcuts:'
+  , toastPostedToFeed: 'Posted your study completion to the feed'
+  , toastGainedPoints: 'Earned {points}pt: {grade}'
+  , deckNotFoundOrEmpty: 'Deck not found or no cards.'
+  , quickStudyTitle: 'Quick Study'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;
