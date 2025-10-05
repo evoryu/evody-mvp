@@ -6,6 +6,8 @@ import { useToast } from '@/app/toast-context'
 import { usePoints } from '@/app/points-context'
 import { getDueReviews, logReview, getCardState, undoLastReview, introduceNewCards, getNewCardAvailability } from '@/lib/reviews'
 import { saveEpisode } from '@/lib/episodes'
+import { getLabel } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 import { CARDS } from '@/lib/decks'
 import { GradeButton } from '@/components/grade-button'
 
@@ -19,11 +21,12 @@ function fetchDueCards(): { id: string; front: string; back: string; deckId?: st
     const card = CARDS.find(c => c.id === id)
     if (card) return card
     // fallback placeholder
-    return { id, front: id, back: '(カード欠損)', deckId: undefined }
+    return { id, front: id, back: getLabel('cardMissing'), deckId: undefined }
   })
 }
 
 export default function ReviewPage() {
+  const locale = useLocale()
   const { add } = usePoints()
   const { showToast } = useToast()
   // Hydration安定化: SSRでは localStorage/state 参照不可のため初期は空配列にし、マウント後に実データ取得
@@ -180,19 +183,19 @@ export default function ReviewPage() {
         const struggleRatio = (dist.again + dist.hard) / answered
         const againRatio = dist.again / answered
         if (againRatio > 0.25) {
-          setGuidance('Again率が高めです。記憶がまだ不安定かもしれません。ペースを少し落として確実に想起しましょう。')
+          setGuidance(getLabel('guidanceAgainHighBody', locale))
           hintShownRef.current = true
-          showToast('ヒント: Again率が高い → ペース調整を検討')
+          showToast(getLabel('hintAgainHighToast', locale))
         } else if (struggleRatio > 0.4) {
-          setGuidance('Hard/Again が多めです。集中が落ちているかカードが難しすぎる可能性。短い休憩や環境調整を挟むと retention が改善します。')
+          setGuidance(getLabel('guidanceStruggleBody', locale))
           hintShownRef.current = true
-          showToast('ヒント: Hard/Again 多 → 休憩推奨')
+          showToast(getLabel('hintStruggleToast', locale))
         }
       }
     }
-    showToast(`${g} 評価 +${pts}pt`)
+    showToast(`${g} +${pts}pt`)
     next()
-  }, [current, add, next, showToast])
+  }, [current, add, next, showToast, locale])
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -215,9 +218,9 @@ export default function ReviewPage() {
   if (hasMounted && cards.length === 0) {
     return (
       <section className="space-y-6">
-        <h1 className="text-2xl font-bold">Review</h1>
+        <h1 className="text-2xl font-bold">{getLabel('reviewTitle', locale)}</h1>
         <div className="rounded-xl border p-8 text-center text-sm text-[var(--c-text-secondary)]">
-          期限が来ているカードはありません。
+          {getLabel('reviewNoDueMessage', locale)}
         </div>
       </section>
     )
@@ -228,7 +231,7 @@ export default function ReviewPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Review</h1>
+  <h1 className="text-3xl font-bold tracking-tight">{getLabel('reviewTitle', locale)}</h1>
       <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--c-progress-track)]" suppressHydrationWarning>
         <div className="h-full bg-[var(--c-progress-fill)] transition-all" style={{ width: `${progress}%` }} />
       </div>
@@ -255,7 +258,7 @@ export default function ReviewPage() {
             </motion.div>
           ) : (
             <motion.p key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-4 text-[15px] font-medium leading-relaxed text-[var(--c-text-muted)]">
-              答えを見るには「Reveal」かスペースキー
+              {getLabel('studyRevealHint', locale)}
             </motion.p>
           )}
         </AnimatePresence>
@@ -264,7 +267,7 @@ export default function ReviewPage() {
           {!reveal ? (
             <motion.button onClick={() => { setReveal(true); revealAtRef.current = Date.now() }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="reveal-button group relative overflow-hidden rounded-xl px-8 py-3 text-sm font-medium shadow-lg">
               <span className="relative z-10 flex items-center gap-2">
-                Reveal <span className="ml-1 opacity-60">[Space]</span>
+                {getLabel('actionReveal', locale)} <span className="ml-1 opacity-60">[Space]</span>
               </span>
             </motion.button>
           ) : (
@@ -284,13 +287,13 @@ export default function ReviewPage() {
       <div className="flex items-center justify-center gap-6">
         <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
           <div className="text-center">
-            <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">獲得ポイント</div>
+            <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('studyEarnedPoints', locale)}</div>
             <div className="mt-1 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{earned}</div>
           </div>
         </div>
         <div className="relative overflow-hidden rounded-2xl bg-[var(--c-surface-alt)] px-6 py-4">
           <div className="text-center">
-            <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">残りカード</div>
+            <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('reviewRemainingCards', locale)}</div>
             <div className="mt-1 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{Math.max(total - (index+1),0)}</div>
           </div>
         </div>
@@ -313,7 +316,7 @@ export default function ReviewPage() {
                   case 'Easy': gradesRef.current.easy = Math.max(0, gradesRef.current.easy - 1); break
                 }
               }
-              showToast('直前のレビューを取り消しました')
+              showToast(getLabel('toastUndidLastReview', locale))
               // 最新 due を再取得し位置調整
               const refreshed = fetchDueCards()
               setCards(refreshed)
@@ -321,12 +324,12 @@ export default function ReviewPage() {
               setReveal(false)
             }}
             className="rounded-xl border px-4 py-2 text-xs font-medium shadow-sm hover:bg-[var(--c-surface-alt)]"
-          >Undo</button>
+          >{getLabel('actionUndo', locale)}</button>
         )}
       </div>
       {guidance && (
         <div className="mx-auto max-w-xl rounded-xl border bg-[var(--c-surface-alt)] px-4 py-3 text-xs leading-relaxed text-[var(--c-text-secondary)] shadow-sm">
-          <span className="font-semibold mr-2 text-[var(--c-text)]">ヒント</span>{guidance}
+      <span className="font-semibold mr-2 text-[var(--c-text)]">{getLabel('hintLabel', locale)}</span>{guidance}
         </div>
       )}
     </section>

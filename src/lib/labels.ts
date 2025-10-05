@@ -172,6 +172,19 @@ const JA = {
   , toastGainedPoints: '{grade}評価で {points}pt 獲得！'
   , deckNotFoundOrEmpty: 'デッキが見つからないか、カードがありません。'
   , quickStudyTitle: 'Quick Study'
+  ,
+  // --- Review page ---
+  reviewTitle: 'Review'
+  , reviewNoDueMessage: '期限が来ているカードはありません。'
+  , reviewRemainingCards: '残りカード'
+  , actionUndo: '取り消し'
+  , toastUndidLastReview: '直前のレビューを取り消しました'
+  , hintLabel: 'ヒント'
+  , hintAgainHighToast: 'ヒント: Again率が高い → ペース調整を検討'
+  , hintStruggleToast: 'ヒント: Hard/Again 多 → 休憩推奨'
+  , guidanceAgainHighBody: 'Again率が高めです。記憶がまだ不安定かもしれません。ペースを少し落として確実に想起しましょう。'
+  , guidanceStruggleBody: 'Hard/Again が多めです。集中が落ちているかカードが難しすぎる可能性。短い休憩や環境調整を挟むと retention が改善します。'
+  , cardMissing: '(カード欠損)'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -276,6 +289,19 @@ const EN: typeof JA = {
   , toastGainedPoints: 'Earned {points}pt: {grade}'
   , deckNotFoundOrEmpty: 'Deck not found or no cards.'
   , quickStudyTitle: 'Quick Study'
+  ,
+  // --- Review page ---
+  reviewTitle: 'Review'
+  , reviewNoDueMessage: 'No cards are due.'
+  , reviewRemainingCards: 'Cards left'
+  , actionUndo: 'Undo'
+  , toastUndidLastReview: 'Undid the last review'
+  , hintLabel: 'Hint'
+  , hintAgainHighToast: 'Hint: High Again rate — consider pacing'
+  , hintStruggleToast: 'Hint: Many Hard/Again — consider a short break'
+  , guidanceAgainHighBody: 'High Again rate suggests unstable recall. Slow the pace slightly for more reliable retrieval.'
+  , guidanceStruggleBody: 'Many Hard/Again may mean fatigue or overly difficult cards. A short break or environment change can improve retention.'
+  , cardMissing: '(missing card)'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;
