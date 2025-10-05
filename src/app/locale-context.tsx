@@ -83,6 +83,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     } catch {/* ignore */}
   }, []);
 
+  // <html lang> を現在のロケールに同期（a11y/SEO）
+  useEffect(() => {
+    try { document.documentElement.setAttribute('lang', locale) } catch { /* ignore */ }
+  }, [locale]);
+
   // タブ間同期: 他タブで変更された場合に反映
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {

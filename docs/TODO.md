@@ -1,10 +1,12 @@
 # TODO (shortlist)
 
-- UI: トースト（達成 "+X pt"）
-- 学習: 簡易SRS（interval/due 更新、`due <= now` を出題）
-- Decks: CSVインポート / エクスポート
-- Profile: 今日の合計獲得pt表示
-- 収益化モック: ミニ窓広告のUI（右下パネル・視聴カウント）
+以下は実装済み（小改善があれば個別Issue／メモへ）：
+
+- [x] UI: トースト（達成 "+X pt"）
+- [x] 学習: 簡易SRS（interval/due 更新、`due <= now` を出題）
+- [x] Decks: CSVインポート / エクスポート
+- [x] Profile: 今日の合計獲得pt表示
+- [x] 収益化モック: ミニ窓広告のUI（右下パネル・視聴カウント）
 
 ## Naming Migration Cleanup (完了)
 
@@ -18,7 +20,8 @@
 
 ### i18n Scaffold Follow-up
 
-- `labels.ts` ですべて ja ベース → en ミラー。
-- "(旧: ...)" 除去時はラベル値だけ更新 (キー不変) で差分最小化。
-- 将来: `?lang=en` または localStorage `evody:lang` で locale 切替 (未実装)。
-- wave3: Upcoming Load 詳細統計 (Shift / Balance / Flatten 説明) をキー化。
+- `labels.ts` ですべて ja ベース → en ミラー。（運用中）
+- "(旧: ...)" 除去時はラベル値だけ更新 (キー不変) で差分最小化。（運用中）
+- 実装済み: `?lang` / cookie / localStorage での locale 切替、クロスタブ同期。
+  - 追加改善: `<html lang>` を現在の locale に同期（a11y/SEO）。
+- wave3: Upcoming Load 詳細統計 (Shift / Balance / Flatten 説明) をキー化（継続）。
