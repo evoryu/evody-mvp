@@ -197,6 +197,14 @@ const JA = {
   , minutesSuffix: '分'
   , commonDash: '—'
   , toastTaskCompletedPoints: 'タスク完了で {points}pt 獲得！'
+  ,
+  // --- Grade buttons ---
+  gradeAgain: 'Again'
+  , gradeHard: 'Hard'
+  , gradeGood: 'Good'
+  , gradeEasy: 'Easy'
+  , pointsSuffix: 'pt'
+  , gradeTitleTemplate: '{label} (+{points}pt)'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -326,6 +334,14 @@ const EN: typeof JA = {
   , minutesSuffix: 'min'
   , commonDash: '—'
   , toastTaskCompletedPoints: 'Gained {points}pt for task completion!'
+  ,
+  // --- Grade buttons ---
+  gradeAgain: 'Again'
+  , gradeHard: 'Hard'
+  , gradeGood: 'Good'
+  , gradeEasy: 'Easy'
+  , pointsSuffix: 'pt'
+  , gradeTitleTemplate: '{label} (+{points}pt)'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;

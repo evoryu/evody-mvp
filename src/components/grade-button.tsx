@@ -2,6 +2,8 @@
 
 import { type ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
+import { getLabel, type LabelKey } from '@/lib/labels'
+import { useLocale } from '@/app/locale-context'
 
 type GradeButtonProps = {
   label: 'Again' | 'Hard' | 'Good' | 'Easy'
@@ -31,6 +33,19 @@ export function GradeButton({
   className,
   ...props
 }: GradeButtonProps) {
+  const locale = useLocale()
+  const labelKey: LabelKey = (
+    label === 'Again' ? 'gradeAgain'
+    : label === 'Hard' ? 'gradeHard'
+    : label === 'Good' ? 'gradeGood'
+    : 'gradeEasy'
+  ) as LabelKey
+  const display = getLabel(labelKey, locale)
+  const pts = scores[label]
+  const title = getLabel('gradeTitleTemplate', locale)
+    .replace('{label}', display)
+    .replace('{points}', String(pts))
+  const suffix = getLabel('pointsSuffix', locale)
   return (
     <button
       className={cn(
@@ -39,13 +54,13 @@ export function GradeButton({
         variants[variant].class,
         className
       )}
-      title={`${label} (+${scores[label]}pt)`}
+      title={title}
       style={{ background: variants[variant].bg }}
       {...props}
     >
-      <span className="relative z-10">{label}</span>
+      <span className="relative z-10">{display}</span>
       <span className="absolute right-2 top-1 text-[10px] opacity-60 transition-opacity group-hover:opacity-100">
-        +{scores[label]}pt
+        +{pts}{suffix}
       </span>
     </button>
   )
