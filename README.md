@@ -74,6 +74,7 @@ npm run build
 - [アーキテクチャ](./docs/ARCHITECTURE.md)
 - [ルーティング](./docs/ROUTES.md)
 - [状態管理](./docs/STATE.md)
+- [状態管理 / i18n](./docs/STATE.md#i18n--locale)
 - [ポイント仕様](./docs/POINTS.md)
 - [UIガイド](./docs/UI_GUIDE.md)
 - [実験(Experiment)概要](./docs/EXPERIMENTS.md)
