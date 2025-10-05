@@ -110,8 +110,8 @@ const JA = {
   infoDeckFlat: 'Flatten = deckPeak / top3Avg: デッキ内尖り指数。1に近いほど平準化 (ピーク突出が小さい)。',
   infoDeckBacklog: 'Backlog: 期限超過(未消化)レビュー件数。高いほど遅延。',
   infoDeckBacklogPct: 'Backlog Ratio = backlog / (backlog + future). 進行中遅延の割合。40%以上=赤。'
-  ,infoShapeMetric: 'Shape = globalPeak / top3Avg: 尖り度指標。1に近いほど平坦 (ピーク突出小)。'
-  ,infoSecondWeekWarning: 'Second Week Warning: 2週目負荷集中シグナル (Peak Shift や Balance 比率)。新規導入ペース調整検討。'
+  , infoShapeMetric: 'Shape = globalPeak / top3Avg: 尖り度指標。1に近いほど平坦 (ピーク突出小)。'
+  , infoSecondWeekWarning: 'Second Week Warning: 2週目負荷集中シグナル (Peak Shift や Balance 比率)。新規導入ペース調整検討。'
   ,
   // --- Badge condition templates (placeholders: ${n}, ${d}) ---
   condition_streak_days: '${n}日連続で学習',
@@ -124,13 +124,19 @@ const JA = {
   condition_episodes_total: '${d}日間で学習回数${n}件以上',
   anyof_heading: '以下のいずれか',
   and_joiner: 'かつ'
-  ,tooltipRetentionMetric: '定着率: 直近7日で Good / Easy 判定となったレビュー割合 (Again 除外)。短期変動があるため閾値段階化。'
-  ,tooltipReactionVariability: '反応ばらつき指数: 反応時間の散らばり度合い (低いほど安定)。内部的には上位/中央値比などの合成指標。'
-  ,tooltipReactionMedian: '反応時間中央値: 直近の学習反応時間 (秒) の中央値。改善は効率向上を示唆。'
-  ,tooltipAddedCardsCount: '追加カード数: シミュレーションで追加する新規カード枚数 (1日あたりの導入想定)。'
+  , tooltipRetentionMetric: '定着率: 直近7日で Good / Easy 判定となったレビュー割合 (Again 除外)。短期変動があるため閾値段階化。'
+  , tooltipReactionVariability: '反応ばらつき指数: 反応時間の散らばり度合い (低いほど安定)。内部的には上位/中央値比などの合成指標。'
+  , tooltipReactionMedian: '反応時間中央値: 直近の学習反応時間 (秒) の中央値。改善は効率向上を示唆。'
+  , tooltipAddedCardsCount: '追加カード数: シミュレーションで追加する新規カード枚数 (1日あたりの導入想定)。'
   // Inverse metric progress (Achievements)
-  ,tooltipTailIndexInverse: '反応ばらつき指数 (低いほど良い): 現在値が閾値以下で条件達成。バー=閾値/現在 (最大1)。'
-  ,tooltipFlattenInverse: 'Flatten 指標 (低いほど平坦): 現在値が閾値以下で達成。バー=閾値/現在 (最大1)。1.0 に近いほどピーク突出が小。'
+  , tooltipTailIndexInverse: '反応ばらつき指数 (低いほど良い): 現在値が閾値以下で条件達成。バー=閾値/現在 (最大1)。'
+  , tooltipFlattenInverse: 'Flatten 指標 (低いほど平坦): 現在値が閾値以下で達成。バー=閾値/現在 (最大1)。1.0 に近いほどピーク突出が小。'
+  , profileUserInfo: 'ユーザー情報'
+  , profileStudyStatus: '学習ステータス'
+  , profileRecentEpisodesButton: '最近のレビューセッション一覧'
+  , profileRecentEpisodesTitle: 'レビューセッション'
+  , profileRecentEpisodesEmpty: 'レビューセッションがまだありません。'
+  , commonClose: '閉じる'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -168,14 +174,14 @@ const EN: typeof JA = {
   tooltipPeakPerDay: 'Peak / Day: Maximum scheduled reviews in the period.',
   tooltipBacklog: 'Backlog: Overdue reviews pending.',
   tooltipBalanceMetric: 'Balance: W2Total/W1Total week2 load concentration.'
-  ,tooltipEarlyRetry: 'Early Retry: Approx = Week1 new * againRate (simplified). All early agains placed on Day2.',
+  , tooltipEarlyRetry: 'Early Retry: Approx = Week1 new * againRate (simplified). All early agains placed on Day2.',
   tooltipTimeLoad: 'Time Load: Estimated minutes = median(sec)*count/60 (rounded).',
   tooltipChainSummary: 'Chain Summary: Aggregate impact of chained reappear pattern (e.g., 1/3/7).'
   ,
   tooltipBarsLegend: 'Bars legend: Before (faint) vs After (solid). Numbers show After-Before. Heights normalized by After peak.',
   tooltipSparklineLegend: 'Sparkline legend: Paired micro-bars show Before/After; value below is After-Before. Heights normalized by After peak.',
   upcomingLoadFooter14dNote: 'For 14d view, show Week1/Week2 Peak/Total, flatten metrics (Flatten, Balance), and week2 concentration warning. What-if assumes 7d horizon.',
-  
+
   // English overrides for badge condition templates
   condition_streak_days: 'Studied for ${n} consecutive days',
   condition_backlog_drop: 'Reduced backlog by ${n}+ cards',
@@ -187,12 +193,18 @@ const EN: typeof JA = {
   condition_episodes_total: '${n}+ study sessions in ${d} days',
   anyof_heading: 'Any of the following',
   and_joiner: 'AND'
-  ,tooltipRetentionMetric: 'Retention: Share of Good/Easy outcomes over last 7 days (Again excluded). Volatile short-term; tiered thresholds.'
-  ,tooltipReactionVariability: 'Reaction Variability Index: Composite spikiness/dispersion of reaction times (lower = steadier).'
-  ,tooltipReactionMedian: 'Median Reaction Time: Median seconds per recent review. Improvement suggests efficiency gains.'
-  ,tooltipTailIndexInverse: 'Reaction Variability (lower is better). Goal achieved when current ≤ target. Bar = target/current (clamped to 1).'
-  ,tooltipFlattenInverse: 'Flatten (lower = flatter). Achieved when current ≤ target. Bar = target/current (clamped). Closer to 1 baseline = flatter schedule.'
-  ,tooltipAddedCardsCount: 'Added cards: Number of new cards to introduce in the simulation (per day assumption).'
+  , tooltipRetentionMetric: 'Retention: Share of Good/Easy outcomes over last 7 days (Again excluded). Volatile short-term; tiered thresholds.'
+  , tooltipReactionVariability: 'Reaction Variability Index: Composite spikiness/dispersion of reaction times (lower = steadier).'
+  , tooltipReactionMedian: 'Median Reaction Time: Median seconds per recent review. Improvement suggests efficiency gains.'
+  , tooltipTailIndexInverse: 'Reaction Variability (lower is better). Goal achieved when current ≤ target. Bar = target/current (clamped to 1).'
+  , tooltipFlattenInverse: 'Flatten (lower = flatter). Achieved when current ≤ target. Bar = target/current (clamped). Closer to 1 baseline = flatter schedule.'
+  , tooltipAddedCardsCount: 'Added cards: Number of new cards to introduce in the simulation (per day assumption).'
+  , profileUserInfo: 'User Info'
+  , profileStudyStatus: 'Study Status'
+  , profileRecentEpisodesButton: 'Recent review sessions'
+  , profileRecentEpisodesTitle: 'Review Episodes'
+  , profileRecentEpisodesEmpty: 'No review sessions yet.'
+  , commonClose: 'Close'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;
