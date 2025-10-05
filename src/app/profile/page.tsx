@@ -289,7 +289,7 @@ export default function ProfilePage() {
             <Avatar name={name || 'You'} size="md" />
 
             <div className="mt-3 space-y-3">
-              <label className="block text-sm text-[var(--c-text-secondary)]">ユーザー名</label>
+              <label className="block text-sm text-[var(--c-text-secondary)]">{getLabel('profileUserName', locale)}</label>
               <input
                 className="form-field"
                 placeholder="あなたの名前"
@@ -297,7 +297,7 @@ export default function ProfilePage() {
                 onChange={(e) => setName(e.target.value)}
               />
               <div className="mt-2 text-sm text-[var(--c-text-muted)]">
-                保存先：localStorage（ブラウザ内だけに保存）
+                {getLabel('profileStorageNote', locale)}
               </div>
             </div>
           </div>
@@ -310,8 +310,8 @@ export default function ProfilePage() {
               onChange={e => setAutoPost(e.target.checked)}
             />
             <label htmlFor="autoPostEpisodes" className="leading-relaxed cursor-pointer">
-              学習セッション完了時に自動でフィードへ投稿する
-              <span className="block text-[12px] text-[var(--c-text-secondary)] mt-1">投稿本文: カード枚数 / 正答率 / 獲得ポイント (#evody)</span>
+              {getLabel('profileAutoPostLabel', locale)}
+              <span className="block text-[12px] text-[var(--c-text-secondary)] mt-1">{getLabel('profileAutoPostNote', locale)}</span>
             </label>
           </div>
         </div>
@@ -326,31 +326,31 @@ export default function ProfilePage() {
                 <option value="goodEasy">G+E</option>
               </select>
               <select value={selectedDeck} onChange={e => { const v = e.target.value; setSelectedDeck(v); try { localStorage.setItem('evody:profile:selectedDeck', v) } catch { } }} className="rounded-md border bg-transparent px-2 py-1 text-[11px] focus:outline-none" title={getLabel('tooltipDeckRetentionSelect', locale)}>
-                <option value="">All Decks</option>
+                <option value="">{getLabel('allDecks', locale)}</option>
                 {DECKS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </span>
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="text-sm font-medium text-[var(--c-text-muted)]">ポイント</div>
+              <div className="text-sm font-medium text-[var(--c-text-muted)]">{getLabel('profilePoints', locale)}</div>
               <div className="mt-1 text-3xl font-bold tabular-nums">{points}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-medium text-[var(--c-text-muted)]">レベル</div>
+              <div className="text-sm font-medium text-[var(--c-text-muted)]">{getLabel('profileLevel', locale)}</div>
               <div className="mt-1 text-3xl font-bold tabular-nums">{level}</div>
             </div>
             <div className="col-span-2 h-px bg-[var(--c-border)]/60" />
             <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">今日のエピソード</div>
+              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('profileTodayEpisodes', locale)}</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats?.episodes ?? 0}</div>
             </div>
             <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">正答率</div>
+              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('profileTodayAccuracy', locale)}</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats ? Math.round(todayStats.accuracy * 100) : 0}%</div>
             </div>
             <div className="text-center">
-              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">今日のポイント</div>
+              <div className="text-xs font-medium tracking-wide text-[var(--c-text-secondary)]">{getLabel('profileTodayPoints', locale)}</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">{todayStats?.points ?? 0}pt</div>
               {/* What-if Dialog (portal-like overlay) */}
               {showWhatIf && whatIfResult && (
@@ -396,8 +396,8 @@ export default function ProfilePage() {
               {retention7d.length > 0 && (
                 <div className="mt-2">
                   <div className="mb-1 text-[10px] font-medium text-[var(--c-text-secondary)] flex items-center gap-2">
-                    <span>7d Retention</span>
-                    <span className="text-[8px] text-[var(--c-text-muted)]">(p=cards)</span>
+                    <span>{getLabel('retention7d', locale)}</span>
+                    <span className="text-[8px] text-[var(--c-text-muted)]">{getLabel('retentionModeCardsShort', locale)}</span>
                   </div>
                   <div className="flex h-9 items-end gap-1">
                     {retention7d.map(d => {
@@ -509,7 +509,7 @@ export default function ProfilePage() {
                 className="btn-secondary flex-1"
                 title={getLabel('tooltipResetPoints')}
               >
-                ポイントをリセット
+                {getLabel('actionResetPoints', locale)}
               </button>
               <button
                 onClick={resetDaily}

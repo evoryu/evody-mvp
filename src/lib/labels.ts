@@ -137,6 +137,18 @@ const JA = {
   , profileRecentEpisodesTitle: 'レビューセッション'
   , profileRecentEpisodesEmpty: 'レビューセッションがまだありません。'
   , commonClose: '閉じる'
+  , profileUserName: 'ユーザー名'
+  , profileStorageNote: '保存先：localStorage（ブラウザ内だけに保存）'
+  , profileAutoPostLabel: '学習セッション完了時に自動でフィードへ投稿する'
+  , profileAutoPostNote: '投稿本文: カード枚数 / 正答率 / 獲得ポイント (#evody)'
+  , profilePoints: 'ポイント'
+  , profileLevel: 'レベル'
+  , profileTodayEpisodes: '今日のエピソード'
+  , profileTodayAccuracy: '正答率'
+  , profileTodayPoints: '今日のポイント'
+  , retention7d: '7d Retention'
+  , retentionModeCardsShort: '(p=cards)'
+  , actionResetPoints: 'ポイントをリセット'
 };
 
 // For now EN mirrors JA (can diverge later). Minimal subset identical.
@@ -205,6 +217,19 @@ const EN: typeof JA = {
   , profileRecentEpisodesTitle: 'Review Episodes'
   , profileRecentEpisodesEmpty: 'No review sessions yet.'
   , commonClose: 'Close'
+  , profileUserName: 'User name'
+  , profileStorageNote: 'Storage: localStorage (browser-only)'
+  , profileAutoPostLabel: 'Auto-post to feed when a study session completes'
+  , profileAutoPostNote: 'Post body: cards / accuracy / points (#evody)'
+  , profilePoints: 'Points'
+  , profileLevel: 'Level'
+  , profileTodayEpisodes: "Today's episodes"
+  , profileTodayAccuracy: 'Accuracy'
+  , profileTodayPoints: "Today's points"
+  , retention7d: '7d Retention'
+  , retentionModeCardsShort: '(p=cards)'
+  , actionResetPoints: 'Reset points'
+  , allDecks: 'All Decks'
 };
 
 const STRINGS = { ja: JA, en: EN } as const;
