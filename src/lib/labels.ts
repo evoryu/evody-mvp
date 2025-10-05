@@ -79,6 +79,7 @@ const JA = {
   deckTableBacklogPct: 'Bkg%',
   deckMetricsFooter: 'W1/2: 7日単位ミニ指標 (Peak/Total)。Shift=W2Peak-W1Peak, Balance=W2Total/W1Total, Flat=deckPeak/top3Avg (1に近いほど尖り小)。Bkg% = backlog / (backlog + future) (≥40% 赤 / ≥25% 黄 / 他 緑)。',
   upcomingLoadFooter: 'Peak は期間内最大日次予定レビュー数、Median は日次件数の中央値。赤=期限超過(backlog)、濃色=これから到来予定。Today=本日残+backlog。バー高さは Peak 基準。',
+  upcomingLoadFooter14dNote: '14d では Week1/Week2 のピーク/合計と平準化指標(Flatten, Balance)・2週目集中警告を表示。What-if は 7d 前提。',
   rawToggleLabel: 'Raw'
   ,
   // --- Wave4 (Tooltip / definition extraction draft) ---
@@ -173,6 +174,7 @@ const EN: typeof JA = {
   ,
   tooltipBarsLegend: 'Bars legend: Before (faint) vs After (solid). Numbers show After-Before. Heights normalized by After peak.',
   tooltipSparklineLegend: 'Sparkline legend: Paired micro-bars show Before/After; value below is After-Before. Heights normalized by After peak.',
+  upcomingLoadFooter14dNote: 'For 14d view, show Week1/Week2 Peak/Total, flatten metrics (Flatten, Balance), and week2 concentration warning. What-if assumes 7d horizon.',
   
   // English overrides for badge condition templates
   condition_streak_days: 'Studied for ${n} consecutive days',

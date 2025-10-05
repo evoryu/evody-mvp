@@ -874,7 +874,7 @@ export default function ProfilePage() {
             </div>
           )}
           <div className="mt-2 text-[10px] text-[var(--c-text-secondary)] leading-relaxed">
-            {getLabel('upcomingLoadFooter', locale)}{horizon===14 && ' 14d では Week1/Week2 のピーク/合計と平準化指標(Flatten, Balance)・2週目集中警告を表示。What-if は 7d 前提。'}
+            {getLabel('upcomingLoadFooter', locale)}{horizon===14 && ' ' + getLabel('upcomingLoadFooter14dNote', locale)}
           </div>
         </div>
       )}
